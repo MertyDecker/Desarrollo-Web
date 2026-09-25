@@ -1,67 +1,268 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-width=1.0">
+    <title>Fukusuke Sushi - Delivery</title>
+    <style>
+        :root {
+            --bg-dark: #121212;
+            --panel-bg: #1e1e1e;
+            --red-brand: #e63946;
+            --text-main: #f1faee;
+            --text-muted: #a8dadc;
+            --border-color: #333;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-main); line-height: 1.6; padding-top: 70px; }
+        
+        /* STICKY HEADER */
+        header { background-color: rgba(0, 0, 0, 0.95); padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--red-brand); position: fixed; top: 0; width: 100%; z-index: 100; backdrop-filter: blur(5px); }
+        .logo-container { display: flex; align-items: center; gap: 10px; }
+        .logo { font-size: 1.5rem; font-weight: bold; color: white; letter-spacing: 1px; }
+        .logo span { color: var(--red-brand); }
+        .header-nav { display: flex; gap: 20px; align-items: center; font-size: 0.95rem; }
+        .header-nav a { color: var(--text-main); text-decoration: none; font-weight: 500; transition: color 0.3s; }
+        .header-nav a:hover { color: var(--red-brand); }
+        .btn-red { background-color: var(--red-brand); color: white; border: none; padding: 10px 20px; border-radius: 25px; cursor: pointer; font-weight: bold; transition: 0.3s; box-shadow: 0 4px 6px rgba(230, 57, 70, 0.3); }
+        .btn-red:hover { background-color: #d62828; transform: translateY(-2px); }
 
-    <title>Semana 1 - Diseño Responsivo</title>
+        /* MAIN LAYOUT */
+        .container { max-width: 1200px; margin: 20px auto; padding: 0 20px; display: grid; grid-template-columns: 1fr; gap: 40px; }
+        
+        /* HERO BANNER */
+        .hero { background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.8)), url('https://images.unsplash.com/photo-1579871494447-9811cf80d66c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80') center/cover; border-radius: 12px; padding: 60px 40px; text-align: center; border: 1px solid var(--border-color); }
+        .hero h1 { font-size: 2.5rem; margin-bottom: 15px; }
+        .hero p { font-size: 1.1rem; color: var(--text-muted); max-width: 600px; margin: 0 auto 20px; }
 
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet">
+        /* SECCIONES Y TABS */
+        .section-title { font-size: 1.8rem; border-left: 5px solid var(--red-brand); padding-left: 15px; margin-bottom: 25px; }
+        .tabs { display: flex; gap: 15px; margin-bottom: 30px; flex-wrap: wrap; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+        .tab-btn { background: transparent; color: var(--text-muted); border: none; padding: 10px 5px; cursor: pointer; font-size: 1rem; font-weight: bold; position: relative; }
+        .tab-btn.active { color: var(--text-main); }
+        .tab-btn.active::after { content: ''; position: absolute; bottom: -11px; left: 0; width: 100%; height: 3px; background-color: var(--red-brand); }
+
+        /* GRID DE PRODUCTOS */
+        .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px; }
+        .prod-card { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; transition: transform 0.3s, box-shadow 0.3s; display: flex; flex-direction: column; }
+        .prod-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.6); border-color: #555; }
+        .prod-img { width: 100%; height: 200px; object-fit: cover; }
+        .prod-content { padding: 20px; display: flex; flex-direction: column; flex-grow: 1; }
+        .prod-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+        .prod-title { font-size: 1.2rem; font-weight: bold; }
+        .prod-price { color: var(--red-brand); font-weight: bold; font-size: 1.3rem; }
+        .prod-desc { color: var(--text-muted); font-size: 0.9rem; flex-grow: 1; margin-bottom: 20px; }
+        .btn-outline { background: transparent; border: 1px solid var(--red-brand); color: var(--text-main); padding: 8px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold; transition: 0.3s; }
+        .btn-outline:hover { background: var(--red-brand); }
+
+        /* FOOTER PROFESIONAL */
+        footer { background-color: #0a0a0a; border-top: 1px solid var(--border-color); padding: 50px 20px 20px; margin-top: 60px; }
+        .footer-grid { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px; margin-bottom: 30px; }
+        .footer-col h3 { color: var(--text-main); margin-bottom: 15px; font-size: 1.1rem; }
+        .footer-col p, .footer-col ul { color: var(--text-muted); font-size: 0.9rem; list-style: none; line-height: 1.8; }
+        .footer-bottom { text-align: center; border-top: 1px solid #222; padding-top: 20px; color: #666; font-size: 0.8rem; }
+
+        /* CARRITO LATERAL */
+        #carrito-modal { position: fixed; top: 0; right: -400px; width: 350px; height: 100vh; background-color: var(--panel-bg); box-shadow: -5px 0 25px rgba(0,0,0,0.9); padding: 25px; z-index: 1000; overflow-y: auto; transition: right 0.3s ease; border-left: 1px solid var(--border-color); }
+        #carrito-modal.open { right: 0; }
+        .close-cart { background: none; border: none; color: var(--text-main); font-size: 1.8rem; cursor: pointer; float: right; }
+        .cart-header { font-size: 1.5rem; font-weight: bold; margin-bottom: 25px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; }
+        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #333; }
+        .cart-item-info { flex-grow: 1; }
+        .cart-item-title { font-weight: bold; font-size: 0.95rem; }
+        .cart-item-price { color: var(--text-muted); font-size: 0.9rem; }
+        .btn-remove { background: none; border: none; color: var(--red-brand); cursor: pointer; font-size: 1.2rem; padding: 0 10px; }
+        .cart-total-box { margin-top: 25px; padding-top: 15px; border-top: 2px dashed #444; }
+        .total-row { display: flex; justify-content: space-between; font-size: 1.3rem; font-weight: bold; margin-bottom: 20px; }
+
+        /* TOAST NOTIFICATION */
+        #toast { visibility: hidden; min-width: 250px; background-color: #2ecc71; color: #fff; text-align: center; border-radius: 5px; padding: 16px; position: fixed; z-index: 1001; right: 30px; bottom: 30px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.3); opacity: 0; transition: opacity 0.3s, bottom 0.3s; }
+        #toast.show { visibility: visible; opacity: 1; bottom: 50px; }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            header { padding: 15px 20px; flex-direction: column; gap: 15px; }
+            body { padding-top: 120px; }
+            .hero h1 { font-size: 2rem; }
+            #carrito-modal { width: 100%; right: -100%; }
+        }
+    </style>
 </head>
-
 <body>
-<!-- Entrega Semana 1 -->
-    <div class="container-fluid">
 
-        <div class="row">
-            <div class="col-12 bg-primary text-white text-center p-4">
-                <h1>Zona de 12 columnas</h1>
-            </div>
+    <!-- ENCABEZADO FIJO -->
+    <header>
+        <div class="logo-container">
+            <div class="logo">Fukusuke<span>Sushi</span></div>
         </div>
+        <nav class="header-nav">
+            <a href="#">Inicio</a>
+            <a href="#carta">Nuestra Carta</a>
+            <a href="#nosotros">Nosotros</a>
+            <button class="btn-red" onclick="toggleCarrito()">🛒 Mi Pedido (<span id="cart-count">0</span>)</button>
+        </nav>
+    </header>
 
-        <div class="row">
-            <div class="col-12 col-md-4 bg-warning text-center p-4">
-                <h2>Izquierda</h2>
+    <div class="container">
+        <!-- HERO BANNER -->
+        <section class="hero">
+            <h1>Sushi Premium a tu Puerta</h1>
+            <p>Ingredientes frescos, cortes precisos y el verdadero sabor tradicional. Pide ahora y disfruta de la mejor experiencia culinaria en la comodidad de tu hogar.</p>
+            <a href="#carta" class="btn-red" style="text-decoration: none; display: inline-block;">Ver Menú</a>
+        </section>
+
+        <!-- MENÚ -->
+        <section id="carta">
+            <h2 class="section-title">Nuestra Carta</h2>
+            <div class="tabs">
+                <button class="tab-btn active">Destacados</button>
+                <button class="tab-btn">Rolls Clásicos</button>
+                <button class="tab-btn">Promociones</button>
+                <button class="tab-btn">Para Compartir</button>
             </div>
-
-            <div class="col-12 col-md-4 bg-secondary text-white text-center p-4">
-                <h2>Centro</h2>
+            
+            <div class="menu-grid" id="menu-container">
+                <!-- Productos inyectados por JS -->
             </div>
-
-            <div class="col-12 col-md-4 bg-danger text-white text-center p-4">
-                <h2>Derecha</h2>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-12 col-md-6 bg-success text-white text-center p-4">
-                <h2>Zona 6</h2>
-            </div>
-
-            <div class="col-12 col-md-6 bg-info text-white text-center p-4">
-                <h2>Zona 6</h2>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-12 col-md-3 bg-dark text-white text-center p-4">
-                <h2>3</h2>
-            </div>
-
-            <div class="col-12 col-md-6 bg-light text-center p-4">
-                <h2>6</h2>
-            </div>
-
-            <div class="col-12 col-md-3 bg-dark text-white text-center p-4">
-                <h2>3</h2>
-            </div>
-        </div>
-
+        </section>
     </div>
 
-</body>
+    <!-- FOOTER -->
+    <footer id="nosotros">
+        <div class="footer-grid">
+            <div class="footer-col">
+                <h3>Fukusuke Sushi</h3>
+                <p>Pasión por la gastronomía japonesa. Calidad indiscutida en cada corte.</p>
+            </div>
+            <div class="footer-col">
+                <h3>Horarios</h3>
+                <ul>
+                    <li>Lunes a Jueves: 12:30 - 22:30</li>
+                    <li>Viernes y Sábado: 12:30 - 23:30</li>
+                    <li>Domingo: Cerrado</li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h3>Contacto & Ubicación</h3>
+                <ul>
+                    <li>📍 Av. Providencia 1234, Santiago</li>
+                    <li>📞 +56 9 1234 5678</li>
+                    <li>✉️ contacto@fukusuke.cl</li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            &copy; 2026 Fukusuke Sushi Delivery. Todos los derechos reservados.
+        </div>
+    </footer>
 
+    <!-- CARRITO LATERAL -->
+    <div id="carrito-modal">
+        <button class="close-cart" onclick="toggleCarrito()">×</button>
+        <div class="cart-header">🛒 Resumen de Pedido</div>
+        <div id="carrito-items-list">
+            <p style="color: var(--text-muted); text-align: center; margin-top: 40px;">Tu carrito está vacío.</p>
+        </div>
+        <div class="cart-total-box" id="cart-total-box" style="display: none;">
+            <div class="total-row">
+                <span>Total:</span>
+                <span>$<span id="cart-total-price">0</span></span>
+            </div>
+            <button class="btn-red" style="width: 100%; padding: 12px; font-size: 1.1rem;" onclick="procesarPago()">Proceder al Pago</button>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast">✅ Producto agregado al carrito</div>
+
+    <script>
+        // CATÁLOGO DE PRODUCTOS (Simulando Base de Datos)
+        const productos = [
+            { id: 1, nombre: "Gyozas de Cerdo (5 un)", desc: "Empanaditas japonesas rellenas de cerdo y verduras, cocinadas al vapor y doradas a la plancha.", precio: 4500, img: "https://images.unsplash.com/photo-1496116218417-1a781b1c416c?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80" },
+            { id: 2, nombre: "California Sake Roll", desc: "Kanikama, palta y pepino, envuelto en sésamo tostado. Un clásico imperdible (8 bocados).", precio: 5900, img: "https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80" },
+            { id: 3, nombre: "Avocado Roll Premium", desc: "Fino salmón fresco, queso crema y cebollín, envuelto en finas láminas de palta.", precio: 7200, img: "https://images.unsplash.com/photo-1553621042-f6e147245754?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80" },
+            { id: 4, nombre: "Ebi Tempura Roll", desc: "Camarón tempura crujiente, queso crema y palta, envuelto en panko.", precio: 8500, img: "https://images.unsplash.com/photo-1583623025817-d180a2221d0a?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80" },
+            { id: 5, nombre: "Sashimi Mixto (12 cortes)", desc: "Selección del chef de los mejores cortes de salmón, atún y pescado blanco del día.", precio: 12900, img: "https://images.unsplash.com/photo-1534482421-64566f976cfa?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80" },
+            { id: 6, nombre: "Promo Fukusuke (40 cortes)", desc: "Combinación ideal para compartir: 10 Gyozas, 20 Rolls fríos y 10 Rolls calientes panko.", precio: 19990, img: "https://images.unsplash.com/photo-1611143660185-cbc4a953e5e6?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80" }
+        ];
+
+        let carrito = [];
+
+        // RENDERIZAR MENÚ EN PANTALLA
+        const menuContainer = document.getElementById('menu-container');
+        productos.forEach(prod => {
+            menuContainer.innerHTML += `
+                <div class="prod-card">
+                    <img src="${prod.img}" alt="${prod.nombre}" class="prod-img">
+                    <div class="prod-content">
+                        <div class="prod-header">
+                            <div class="prod-title">${prod.nombre}</div>
+                            <div class="prod-price">$${prod.precio.toLocaleString('es-CL')}</div>
+                        </div>
+                        <div class="prod-desc">${prod.desc}</div>
+                        <button class="btn-outline" onclick="agregarAlCarrito(${prod.id}, '${prod.nombre}', ${prod.precio})">Agregar al Pedido</button>
+                    </div>
+                </div>
+            `;
+        });
+
+        // LÓGICA DEL CARRITO
+        function agregarAlCarrito(id, nombre, precio) {
+            carrito.push({ id, nombre, precio, idUnico: Date.now() });
+            actualizarCarrito();
+            mostrarToast();
+        }
+
+        function actualizarCarrito() {
+            document.getElementById('cart-count').innerText = carrito.length;
+            const itemsList = document.getElementById('carrito-items-list');
+            const totalBox = document.getElementById('cart-total-box');
+            
+            if (carrito.length === 0) {
+                itemsList.innerHTML = '<p style="color: var(--text-muted); text-align: center; margin-top: 40px;">Tu carrito está vacío.</p>';
+                totalBox.style.display = 'none';
+                return;
+            }
+
+            itemsList.innerHTML = '';
+            let total = 0;
+            
+            carrito.forEach((item) => {
+                total += item.precio;
+                itemsList.innerHTML += `
+                    <div class="cart-item">
+                        <div class="cart-item-info">
+                            <div class="cart-item-title">${item.nombre}</div>
+                            <div class="cart-item-price">$${item.precio.toLocaleString('es-CL')}</div>
+                        </div>
+                        <button class="btn-remove" onclick="eliminarDelCarrito(${item.idUnico})">✖</button>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('cart-total-price').innerText = total.toLocaleString('es-CL');
+            totalBox.style.display = 'block';
+        }
+
+        function eliminarDelCarrito(idUnico) {
+            carrito = carrito.filter(item => item.idUnico !== idUnico);
+            actualizarCarrito();
+        }
+
+        // CONTROL DEL MODAL Y ALERTAS
+        function toggleCarrito() {
+            document.getElementById('carrito-modal').classList.toggle('open');
+        }
+
+        function procesarPago() {
+            alert('Redirigiendo a pasarela de pago... (Se implementará en la fase de Backend/Fastify)');
+        }
+
+        function mostrarToast() {
+            const toast = document.getElementById("toast");
+            toast.className = "show";
+            setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 2500);
+        }
+    </script>
+</body>
 </html>
