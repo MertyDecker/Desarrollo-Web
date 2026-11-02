@@ -1,0 +1,51 @@
+# Fukusuke Sushi - entorno local reproducible.
+# Uso:  cp .env.example .env   (y editar los valores)   ->   docker compose up --build
+#
+# Avance 7: solo existe inventory. En los siguientes avances se suman clients,
+# orders, payments, el servicio de autenticación, el API Gateway y el GraphQL
+# Gateway. Cuando el gateway exista, ningún servicio interno publicará puertos.
+
+services:
+  inventory:
+    build: ./services/inventory
+    environment:
+      PORT: 3001
+      # Las credenciales vienen del archivo .env (que no se sube a GitHub).
+      MONGO_URL: mongodb://${MONGO_INVENTORY_USER:?falta MONGO_INVENTORY_USER en .env}:${MONGO_INVENTORY_PASSWORD:?falta MONGO_INVENTORY_PASSWORD en .env}@mongo-inventory:27017/${MONGO_INVENTORY_DB:-inventory_db}
+      SEED_ON_START: "true" # carga el catálogo de prueba si está vacío (solo desarrollo)
+    depends_on:
+      mongo-inventory:
+        condition: service_healthy
+    ports:
+      # SOLO PARA DESARROLLO DEL AVANCE 7, y únicamente en el propio equipo.
+      # Se elimina cuando entre el API Gateway (avance 8).
+      - "127.0.0.1:${INVENTORY_PORT:-3001}:3001"
+    networks: [backend]
+    restart: unless-stopped
+
+  mongo-inventory:
+    image: mongo:7
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INVENTORY_ROOT_USER:-root_inventory}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INVENTORY_ROOT_PASSWORD:?falta MONGO_INVENTORY_ROOT_PASSWORD en .env}
+      MONGO_INITDB_DATABASE: ${MONGO_INVENTORY_DB:-inventory_db}
+      APP_DB_USER: ${MONGO_INVENTORY_USER}
+      APP_DB_PASSWORD: ${MONGO_INVENTORY_PASSWORD}
+    volumes:
+      - mongo-inventory-data:/data/db
+      - ./infra/mongo/inventory-init.sh:/docker-entrypoint-initdb.d/inventory-init.sh:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks: [backend]
+    # Sin "ports": la base de datos no es accesible desde fuera de la red de Docker.
+    restart: unless-stopped
+
+networks:
+  backend:
+
+volumes:
+  mongo-inventory-data:

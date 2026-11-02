@@ -1,0 +1,22 @@
+# Dependencias
+node_modules/
+
+# Secretos y configuración local: NUNCA se suben al repositorio
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+
+# Logs y temporales
+*.log
+npm-debug.log*
+coverage/
+.nyc_output/
+
+# Sistema / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

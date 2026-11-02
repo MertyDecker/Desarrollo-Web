@@ -1,0 +1,5 @@
+# Los scripts de shell y Dockerfiles deben terminar en LF aunque se editen en Windows,
+# o fallan dentro de los contenedores Linux.
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.yml text eol=lf
