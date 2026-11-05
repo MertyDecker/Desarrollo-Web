@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const { buildApp } = require('./app');
 const { repoMongo, Producto } = require('./repo.mongo');
 const { sembrar } = require('./seed');
+const { leerSecreto } = require('./secrets');
 
 const PORT = Number(process.env.PORT || 3001);
 const MONGO_URL = process.env.MONGO_URL;
@@ -23,7 +24,8 @@ async function main() {
     console.log(`Seed de desarrollo: ${creados} producto(s) nuevo(s).`);
   }
 
-  const app = buildApp({ repo: repoMongo, logger: true });
+  const serviceTokens = { gateway: leerSecreto('SVC_TOKEN_GATEWAY_FILE') };
+  const app = buildApp({ repo: repoMongo, serviceTokens, logger: true });
 
   const cerrar = async (senal) => {
     app.log.info(`Recibida ${senal}, cerrando...`);

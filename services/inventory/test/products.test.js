@@ -11,8 +11,16 @@ const SEMILLA = [
   { nombre: 'California Roll', precio: 5990, stock: 50, categoria: 'rolls' }
 ];
 
-function nuevaApp() {
-  return buildApp({ repo: crearRepoMemoria(SEMILLA) });
+const TOKEN = 'token-de-prueba-gateway-inventory';
+
+// Envuelve la app para que cada llamada lleve la identidad del gateway y, por
+// defecto, el rol administrador (las pruebas de permisos van al final).
+function nuevaApp(repo = crearRepoMemoria(SEMILLA), extra = { 'x-user-role': 'admin' }) {
+  const app = buildApp({ repo, serviceTokens: { gateway: TOKEN } });
+  return {
+    inject: (opts) =>
+      app.inject({ ...opts, headers: { 'x-service-token': TOKEN, ...extra, ...(opts.headers || {}) } })
+  };
 }
 
 const PRODUCTO_VALIDO = {
@@ -69,7 +77,7 @@ test('S01: filtros inválidos responden 400', async () => {
 });
 
 test('S01: sin resultados devuelve lista vacía', async () => {
-  const app = buildApp({ repo: crearRepoMemoria([]) });
+  const app = nuevaApp(crearRepoMemoria([]));
   const res = await app.inject({ method: 'GET', url: '/products' });
   assert.equal(res.statusCode, 200);
   assert.deepEqual(res.json(), []);
@@ -130,7 +138,7 @@ test('S04: modificar reemplaza el producto; 404 si no existe', async () => {
 
 test('S05: dar de baja oculta el producto del catálogo pero conserva el registro', async () => {
   const repo = crearRepoMemoria(SEMILLA);
-  const app = buildApp({ repo });
+  const app = nuevaApp(repo);
   const lista = (await app.inject({ method: 'GET', url: '/products' })).json();
   const id = lista[0].id;
 
@@ -163,9 +171,38 @@ test('Errores inesperados responden 500 sin filtrar detalles internos', async ()
       throw new Error('mongodb://usuario:clave@host fallo interno');
     }
   };
-  const app = buildApp({ repo: repoRoto });
+  const app = nuevaApp(repoRoto);
   const res = await app.inject({ method: 'GET', url: '/products' });
   assert.equal(res.statusCode, 500);
   assert.deepEqual(res.json(), { error: 'Error interno' });
   assert.ok(!res.body.includes('mongodb://'));
+});
+
+test('Seguridad: sin token de servicio responde 401 (no se puede llamar sin pasar por el gateway)', async () => {
+  const app = buildApp({ repo: crearRepoMemoria(SEMILLA), serviceTokens: { gateway: TOKEN } });
+  const sinToken = await app.inject({ method: 'GET', url: '/products' });
+  const tokenFalso = await app.inject({
+    method: 'GET',
+    url: '/products',
+    headers: { 'x-service-token': 'token-inventado-por-un-atacante' }
+  });
+  const salud = await app.inject({ method: 'GET', url: '/health' });
+  assert.equal(sinToken.statusCode, 401);
+  assert.equal(tokenFalso.statusCode, 401);
+  assert.equal(salud.statusCode, 200);
+});
+
+test('Seguridad: crear, modificar o dar de baja sin rol admin responde 403', async () => {
+  const cliente = nuevaApp(crearRepoMemoria(SEMILLA), { 'x-user-role': 'cliente' });
+  const id = (await cliente.inject({ method: 'GET', url: '/products' })).json()[0].id;
+  const post = await cliente.inject({ method: 'POST', url: '/products', payload: PRODUCTO_VALIDO });
+  const put = await cliente.inject({ method: 'PUT', url: `/products/${id}`, payload: PRODUCTO_VALIDO });
+  const del = await cliente.inject({ method: 'DELETE', url: `/products/${id}` });
+  assert.equal(post.statusCode, 403);
+  assert.equal(put.statusCode, 403);
+  assert.equal(del.statusCode, 403);
+});
+
+test('Seguridad: el servicio no arranca sin un token de servicio configurado', () => {
+  assert.throws(() => buildApp({ repo: crearRepoMemoria([]), serviceTokens: {} }));
 });
