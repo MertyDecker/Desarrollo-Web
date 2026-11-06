@@ -1,51 +1,163 @@
 # Fukusuke Sushi - entorno local reproducible.
-# Uso:  cp .env.example .env   (y editar los valores)   ->   docker compose up --build
 #
-# Avance 7: solo existe inventory. En los siguientes avances se suman clients,
-# orders, payments, el servicio de autenticación, el API Gateway y el GraphQL
-# Gateway. Cuando el gateway exista, ningún servicio interno publicará puertos.
+# Antes del primer arranque:
+#   1) cp .env.example .env          (y cambiar las contraseñas)
+#   2) generar los secretos:
+#      docker run --rm -v "${PWD}:/work" -w /work node:22-alpine node scripts/generar-secretos.js
+# Arranque:  docker compose up --build
+#
+# Redes:
+#   public  -> solo el API Gateway. Es lo único publicado en el equipo (puerto 8080).
+#   private -> servicios internos y bases de datos. Es "internal": no tiene salida
+#              a Internet y ningún contenedor de esta red publica puertos.
+
+x-mongo-healthcheck: &mongo-healthcheck
+  test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+  interval: 10s
+  timeout: 5s
+  retries: 10
+  start_period: 20s
 
 services:
+  # ---------------------------------------------------------------- borde
+  api-gateway:
+    build: ./services/api-gateway
+    environment:
+      PORT: 8080
+      INVENTORY_URL: http://inventory:3001
+      CLIENTS_URL: http://clients:3002
+      AUTH_URL: http://auth:3003
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5500}
+      JWT_PUBLIC_KEY_FILE: /run/secrets/jwt_public_key
+      SVC_TOKEN_INVENTORY_FILE: /run/secrets/svc_token_gateway_inventory
+      SVC_TOKEN_CLIENTS_FILE: /run/secrets/svc_token_gateway_clients
+      SVC_TOKEN_AUTH_FILE: /run/secrets/svc_token_gateway_auth
+    secrets: [jwt_public_key, svc_token_gateway_inventory, svc_token_gateway_clients, svc_token_gateway_auth]
+    ports:
+      - "127.0.0.1:${GATEWAY_PORT:-8080}:8080"
+    networks: [public, private]
+    depends_on:
+      inventory: { condition: service_healthy }
+      clients: { condition: service_healthy }
+      auth: { condition: service_healthy }
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------- servicios privados
   inventory:
     build: ./services/inventory
     environment:
       PORT: 3001
-      # Las credenciales vienen del archivo .env (que no se sube a GitHub).
-      MONGO_URL: mongodb://${MONGO_INVENTORY_USER:?falta MONGO_INVENTORY_USER en .env}:${MONGO_INVENTORY_PASSWORD:?falta MONGO_INVENTORY_PASSWORD en .env}@mongo-inventory:27017/${MONGO_INVENTORY_DB:-inventory_db}
-      SEED_ON_START: "true" # carga el catálogo de prueba si está vacío (solo desarrollo)
+      MONGO_URL: mongodb://${MONGO_INVENTORY_USER:?falta en .env}:${MONGO_INVENTORY_PASSWORD:?falta en .env}@mongo-inventory:27017/${MONGO_INVENTORY_DB:-inventory_db}
+      SEED_ON_START: "true"
+      SVC_TOKEN_GATEWAY_FILE: /run/secrets/svc_token_gateway_inventory
+    secrets: [svc_token_gateway_inventory]
     depends_on:
-      mongo-inventory:
-        condition: service_healthy
-    ports:
-      # SOLO PARA DESARROLLO DEL AVANCE 7, y únicamente en el propio equipo.
-      # Se elimina cuando entre el API Gateway (avance 8).
-      - "127.0.0.1:${INVENTORY_PORT:-3001}:3001"
-    networks: [backend]
+      mongo-inventory: { condition: service_healthy }
+    networks: [private]
     restart: unless-stopped
 
+  clients:
+    build: ./services/clients
+    environment:
+      PORT: 3002
+      MONGO_URL: mongodb://${MONGO_CLIENTS_USER:?falta en .env}:${MONGO_CLIENTS_PASSWORD:?falta en .env}@mongo-clients:27017/${MONGO_CLIENTS_DB:-clients_db}
+      AUTH_URL: http://auth:3003
+      MAIL_ADAPTER: dev
+      SVC_TOKEN_GATEWAY_FILE: /run/secrets/svc_token_gateway_clients
+      SVC_TOKEN_CLIENTS_AUTH_FILE: /run/secrets/svc_token_clients_auth
+    secrets: [svc_token_gateway_clients, svc_token_clients_auth]
+    depends_on:
+      mongo-clients: { condition: service_healthy }
+      auth: { condition: service_healthy }
+    networks: [private]
+    restart: unless-stopped
+
+  auth:
+    build: ./services/auth
+    environment:
+      PORT: 3003
+      MONGO_URL: mongodb://${MONGO_AUTH_USER:?falta en .env}:${MONGO_AUTH_PASSWORD:?falta en .env}@mongo-auth:27017/${MONGO_AUTH_DB:-auth_db}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@fukusuke.cl}
+      ADMIN_PASSWORD_FILE: /run/secrets/admin_password
+      JWT_PRIVATE_KEY_FILE: /run/secrets/jwt_private_key
+      SVC_TOKEN_GATEWAY_FILE: /run/secrets/svc_token_gateway_auth
+      SVC_TOKEN_CLIENTS_FILE: /run/secrets/svc_token_clients_auth
+    secrets: [jwt_private_key, admin_password, svc_token_gateway_auth, svc_token_clients_auth]
+    depends_on:
+      mongo-auth: { condition: service_healthy }
+    networks: [private]
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------- bases de datos (una por servicio)
   mongo-inventory:
     image: mongo:7
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INVENTORY_ROOT_USER:-root_inventory}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INVENTORY_ROOT_PASSWORD:?falta MONGO_INVENTORY_ROOT_PASSWORD en .env}
+      MONGO_INITDB_ROOT_USERNAME: root_inventory
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INVENTORY_ROOT_PASSWORD:?falta en .env}
       MONGO_INITDB_DATABASE: ${MONGO_INVENTORY_DB:-inventory_db}
       APP_DB_USER: ${MONGO_INVENTORY_USER}
       APP_DB_PASSWORD: ${MONGO_INVENTORY_PASSWORD}
     volumes:
       - mongo-inventory-data:/data/db
-      - ./infra/mongo/inventory-init.sh:/docker-entrypoint-initdb.d/inventory-init.sh:ro
-    healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 20s
-    networks: [backend]
-    # Sin "ports": la base de datos no es accesible desde fuera de la red de Docker.
+      - ./infra/mongo/init-app-user.sh:/docker-entrypoint-initdb.d/init-app-user.sh:ro
+    healthcheck: *mongo-healthcheck
+    networks: [private]
+    restart: unless-stopped
+
+  mongo-clients:
+    image: mongo:7
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root_clients
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_CLIENTS_ROOT_PASSWORD:?falta en .env}
+      MONGO_INITDB_DATABASE: ${MONGO_CLIENTS_DB:-clients_db}
+      APP_DB_USER: ${MONGO_CLIENTS_USER}
+      APP_DB_PASSWORD: ${MONGO_CLIENTS_PASSWORD}
+    volumes:
+      - mongo-clients-data:/data/db
+      - ./infra/mongo/init-app-user.sh:/docker-entrypoint-initdb.d/init-app-user.sh:ro
+    healthcheck: *mongo-healthcheck
+    networks: [private]
+    restart: unless-stopped
+
+  mongo-auth:
+    image: mongo:7
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root_auth
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_AUTH_ROOT_PASSWORD:?falta en .env}
+      MONGO_INITDB_DATABASE: ${MONGO_AUTH_DB:-auth_db}
+      APP_DB_USER: ${MONGO_AUTH_USER}
+      APP_DB_PASSWORD: ${MONGO_AUTH_PASSWORD}
+    volumes:
+      - mongo-auth-data:/data/db
+      - ./infra/mongo/init-app-user.sh:/docker-entrypoint-initdb.d/init-app-user.sh:ro
+    healthcheck: *mongo-healthcheck
+    networks: [private]
     restart: unless-stopped
 
 networks:
-  backend:
+  public: {}
+  private:
+    internal: true
 
 volumes:
   mongo-inventory-data:
+  mongo-clients-data:
+  mongo-auth-data:
+
+# Secretos montados como archivos en /run/secrets/<nombre> SOLO en los
+# contenedores que los declaran. Se generan con scripts/generar-secretos.js.
+secrets:
+  jwt_private_key:
+    file: ./secrets/jwt_private.pem
+  jwt_public_key:
+    file: ./secrets/jwt_public.pem
+  admin_password:
+    file: ./secrets/admin_password.txt
+  svc_token_gateway_inventory:
+    file: ./secrets/svc_token_gateway_inventory.txt
+  svc_token_gateway_clients:
+    file: ./secrets/svc_token_gateway_clients.txt
+  svc_token_gateway_auth:
+    file: ./secrets/svc_token_gateway_auth.txt
+  svc_token_clients_auth:
+    file: ./secrets/svc_token_clients_auth.txt

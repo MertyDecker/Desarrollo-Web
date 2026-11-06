@@ -1,0 +1,19 @@
+{
+  "name": "clients",
+  "version": "0.1.0",
+  "description": "Microservicio de clientes de Fukusuke Sushi: registro, perfil y direcciones.",
+  "private": true,
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test \"test/**/*.test.js\""
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "fastify": "^5.12.8",
+    "mongoose": "^9.12.0"
+  }
+}

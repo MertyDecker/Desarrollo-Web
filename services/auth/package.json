@@ -1,0 +1,19 @@
+{
+  "name": "auth",
+  "version": "0.1.0",
+  "description": "Servicio de autenticación de Fukusuke Sushi: credenciales, sesiones y tokens.",
+  "private": true,
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test \"test/**/*.test.js\""
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "fastify": "^5.12.8",
+    "mongoose": "^9.12.0"
+  }
+}

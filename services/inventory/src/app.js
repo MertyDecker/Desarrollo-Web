@@ -1,6 +1,7 @@
 'use strict';
 
 const Fastify = require('fastify');
+const { instalarAutenticacionDeServicio } = require('./serviceAuth');
 
 const CATEGORIAS = ['rolls', 'nigiri', 'entradas', 'promociones', 'compartir'];
 const ID_PATTERN = '^[a-f0-9]{24}$';
@@ -77,13 +78,22 @@ function aAdmin(p) {
   return { ...aPublico(p), stock: p.stock, activo: p.activo };
 }
 
+// preHandler de las operaciones de administración. El gateway ya exige el rol,
+// pero el servicio vuelve a comprobarlo: ocultar un botón o confiar solo en el
+// borde no basta (defensa en profundidad).
+async function requiereAdmin(request, reply) {
+  if (request.headers['x-user-role'] !== 'admin') {
+    return reply.code(403).send({ error: 'Acceso denegado' });
+  }
+}
+
 /**
  * Construye la aplicación Fastify.
- * @param {{repo: object, logger?: boolean|object}} opciones
+ * @param {{repo: object, serviceTokens: object, logger?: boolean|object}} opciones
  *   repo: implementa list, get, create, replace, deactivate (ver repo.mongo.js).
- *   Se inyecta para poder probar el servicio sin base de datos.
+ *   serviceTokens: { gateway: '<token>' } — solo el gateway puede llamar a este servicio.
  */
-function buildApp({ repo, logger = false }) {
+function buildApp({ repo, serviceTokens, logger = false }) {
   const app = Fastify({
     logger,
     // Identificador de correlación: se respeta el que envíe el gateway.
@@ -96,6 +106,9 @@ function buildApp({ repo, logger = false }) {
   app.addHook('onSend', async (request, reply) => {
     reply.header('x-request-id', request.id);
   });
+
+  // Toda ruta (salvo /health) exige la identidad del gateway.
+  instalarAutenticacionDeServicio(app, serviceTokens);
 
   app.setErrorHandler((error, request, reply) => {
     if (error.validation) {
@@ -158,6 +171,7 @@ function buildApp({ repo, logger = false }) {
   app.post(
     '/products',
     {
+      preHandler: requiereAdmin,
       schema: {
         body: cuerpoProducto,
         response: { 201: productoAdmin }
@@ -173,6 +187,7 @@ function buildApp({ repo, logger = false }) {
   app.put(
     '/products/:id',
     {
+      preHandler: requiereAdmin,
       schema: {
         params: paramsId,
         body: cuerpoProducto,
@@ -192,6 +207,7 @@ function buildApp({ repo, logger = false }) {
   app.delete(
     '/products/:id',
     {
+      preHandler: requiereAdmin,
       schema: {
         params: paramsId,
         response: { 404: errorSchema }
