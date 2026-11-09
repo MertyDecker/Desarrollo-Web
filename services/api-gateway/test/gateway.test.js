@@ -33,7 +33,7 @@ function token(rol = 'cliente', extra = {}) {
   });
 }
 
-const TOKENS = { inventory: 'tok-gw-inventory-0001', clients: 'tok-gw-clients-00001', auth: 'tok-gw-auth-000000001' };
+const TOKENS = { inventory: 'tok-gw-inventory-0001', clients: 'tok-gw-clients-00001', auth: 'tok-gw-auth-000000001', orders: 'tok-gw-orders-0000001', payments: 'tok-gw-payments-00001', graphql: 'tok-gw-graphql-000001' };
 
 // ---- Servicios internos falsos: registran lo que reciben --------------------
 function servicioFalso(responder) {
@@ -69,10 +69,13 @@ async function escenario({ revocados = new Set(), authCaido = false, inventario,
     if (r.url === '/logout') return { status: 204 };
     return { json: { token: 'x', expiraEn: 900 } };
   });
+  const ord = await servicioFalso(() => ({ json: { id: 'pedido-1' } }));
+  const pay = await servicioFalso((r) => (r.url === '/webhook' && r.headers['x-signature'] !== 'firma-buena' ? { status: 401, json: { error: 'Firma inválida' } } : { json: { ok: true } }));
+  const gql = await servicioFalso(() => ({ json: { data: {} } }));
   const app = await buildApp({
     config: {
       publicKeyPem: PUB,
-      upstreams: { inventory: inv.url, clients: cli.url, auth: auth.url },
+      upstreams: { inventory: inv.url, clients: cli.url, auth: auth.url, orders: ord.url, payments: pay.url, graphql: gql.url },
       serviceTokens: TOKENS,
       corsOrigin: 'http://localhost:5500',
       timeoutMs
@@ -80,9 +83,9 @@ async function escenario({ revocados = new Set(), authCaido = false, inventario,
   });
   const cerrar = async () => {
     await app.close();
-    for (const s of [inv, cli, auth]) s.server.close();
+    for (const s of [inv, cli, auth, ord, pay, gql]) s.server.close();
   };
-  return { app, inv, cli, auth, cerrar };
+  return { app, inv, cli, auth, ord, pay, gql, cerrar };
 }
 
 const bearer = (t) => ({ authorization: `Bearer ${t}` });
@@ -312,4 +315,50 @@ test('El gateway no arranca si falta la configuración de un servicio', async ()
   await assert.rejects(
     buildApp({ config: { publicKeyPem: PUB, upstreams: { inventory: 'http://x' }, serviceTokens: TOKENS } })
   );
+});
+
+test('Pedidos: solo se reenvía Idempotency-Key de la lista blanca, con identidad verificada', async () => {
+  const e = await escenario();
+  try {
+    const r = await e.app.inject({
+      method: 'POST', url: '/api/v1/orders', payload: { items: [] },
+      headers: { ...bearer(token('cliente')), 'idempotency-key': 'clave-123456', 'x-signature': 'colada', 'x-user-id': 'otro' }
+    });
+    assert.equal(r.statusCode, 200);
+    const h = e.ord.recibidas[0].headers;
+    assert.equal(h['idempotency-key'], 'clave-123456');
+    assert.equal(h['x-signature'], undefined, 'cabecera fuera de la lista blanca de la ruta');
+    assert.equal(h['x-user-id'], 'cliente-a');
+    assert.equal(h['x-service-token'], TOKENS.orders);
+  } finally { await e.cerrar(); }
+});
+
+test('Webhook de pagos: anónimo, reenvía la firma y propaga el 401 de firma inválida', async () => {
+  const e = await escenario();
+  try {
+    const mala = await e.app.inject({ method: 'POST', url: '/api/v1/payments/webhook', payload: { a: 1 }, headers: { 'x-signature': 'falsa', 'x-timestamp': '1700000000' } });
+    assert.equal(mala.statusCode, 401);
+    const buena = await e.app.inject({ method: 'POST', url: '/api/v1/payments/webhook', payload: { a: 1 }, headers: { 'x-signature': 'firma-buena', 'x-timestamp': '1700000000' } });
+    assert.equal(buena.statusCode, 200);
+  } finally { await e.cerrar(); }
+});
+
+test('GraphQL y cambio de estado: sin sesión 401, cliente no puede cambiar estados (403)', async () => {
+  const e = await escenario();
+  try {
+    assert.equal((await e.app.inject({ method: 'POST', url: '/api/v1/graphql', payload: { query: '{ misPedidos { id } }' } })).statusCode, 401);
+    const est = await e.app.inject({ method: 'PATCH', url: '/api/v1/orders/x/status', payload: { estado: 'entregado' }, headers: bearer(token('cliente')) });
+    assert.equal(est.statusCode, 403);
+    assert.equal(e.ord.recibidas.length, 0);
+  } finally { await e.cerrar(); }
+});
+
+test('Login con credenciales inválidas: el 401 de auth llega al navegador (no 502)', async () => {
+  const e = await escenario();
+  try {
+    e.auth.server.removeAllListeners('request');
+    e.auth.server.on('request', (req, res) => { res.writeHead(401, { 'content-type': 'application/json' }); res.end('{"error":"Correo o contraseña incorrectos"}'); });
+    const r = await e.app.inject({ method: 'POST', url: '/api/v1/auth/login', payload: { correo: 'a@b.cl', password: 'x' } });
+    assert.equal(r.statusCode, 401);
+  } finally { await e.cerrar(); }
 });

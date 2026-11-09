@@ -1,0 +1,263 @@
+{
+  "entorno": {
+    "fecha": "2026-11-09T02:51:03.463Z",
+    "so": "Linux 6.18.44-fc-v310 (x64)",
+    "cpu": "2 x Intel(R) Xeon(R) Processor @ 2.10GHz",
+    "memoriaGB": 7.8,
+    "node": "22.23.4",
+    "modo": "arranque local (npm run local), MongoDB 7 con persistencia en disco",
+    "nota": "Generador de carga y backend en el mismo equipo; la latencia incluye ese costo."
+  },
+  "objetivos": {
+    "catalogo": {
+      "p95": 300,
+      "rps": 50
+    },
+    "pedidoRest": {
+      "p95": 500,
+      "rps": 20
+    },
+    "resumenGraphql": {
+      "p95": 800,
+      "rps": 10
+    },
+    "crearPedido": {
+      "p95": 1000,
+      "rps": 2
+    }
+  },
+  "resultados": [
+    {
+      "nombre": "catalogo",
+      "concurrencia": 20,
+      "duracionSeg": 20,
+      "solicitudes": 19190,
+      "rps": 960.1,
+      "p50": 17.8,
+      "p95": 42.8,
+      "p99": 63.9,
+      "maxMs": 203,
+      "errores": 0,
+      "tasaError": 0,
+      "codigos": {
+        "200": 19190
+      },
+      "recursos": {
+        "auth": {
+          "cpuProm": 0.1,
+          "cpuMax": 2,
+          "memMaxMB": 132.2
+        },
+        "inventory": {
+          "cpuProm": 62.4,
+          "cpuMax": 88,
+          "memMaxMB": 207.5
+        },
+        "clients": {
+          "cpuProm": 0.1,
+          "cpuMax": 2,
+          "memMaxMB": 87.6
+        },
+        "orders": {
+          "cpuProm": 0.1,
+          "cpuMax": 2,
+          "memMaxMB": 100
+        },
+        "payments": {
+          "cpuProm": 0.1,
+          "cpuMax": 2,
+          "memMaxMB": 82.4
+        },
+        "graphql-gateway": {
+          "cpuProm": 0,
+          "cpuMax": 0,
+          "memMaxMB": 68.8
+        },
+        "api-gateway": {
+          "cpuProm": 53.9,
+          "cpuMax": 66,
+          "memMaxMB": 195.5
+        }
+      },
+      "objetivo": {
+        "p95": 300,
+        "rps": 50
+      },
+      "cumple": true
+    },
+    {
+      "nombre": "pedidoRest",
+      "concurrencia": 10,
+      "duracionSeg": 15,
+      "solicitudes": 6776,
+      "rps": 451.5,
+      "p50": 20.2,
+      "p95": 38.2,
+      "p99": 54.9,
+      "maxMs": 113.6,
+      "errores": 0,
+      "tasaError": 0,
+      "codigos": {
+        "200": 6776
+      },
+      "recursos": {
+        "auth": {
+          "cpuProm": 36.6,
+          "cpuMax": 60,
+          "memMaxMB": 171.6
+        },
+        "inventory": {
+          "cpuProm": 0.8,
+          "cpuMax": 21.2,
+          "memMaxMB": 207.5
+        },
+        "clients": {
+          "cpuProm": 0.1,
+          "cpuMax": 2,
+          "memMaxMB": 87.6
+        },
+        "orders": {
+          "cpuProm": 39.4,
+          "cpuMax": 62,
+          "memMaxMB": 142.5
+        },
+        "payments": {
+          "cpuProm": 0.1,
+          "cpuMax": 2,
+          "memMaxMB": 82.7
+        },
+        "graphql-gateway": {
+          "cpuProm": 0,
+          "cpuMax": 0,
+          "memMaxMB": 68.8
+        },
+        "api-gateway": {
+          "cpuProm": 53.1,
+          "cpuMax": 66,
+          "memMaxMB": 207.8
+        }
+      },
+      "objetivo": {
+        "p95": 500,
+        "rps": 20
+      },
+      "cumple": true
+    },
+    {
+      "nombre": "resumenGraphql",
+      "concurrencia": 10,
+      "duracionSeg": 15.1,
+      "solicitudes": 3003,
+      "rps": 199.1,
+      "p50": 47.3,
+      "p95": 77.6,
+      "p99": 104,
+      "maxMs": 218.2,
+      "errores": 0,
+      "tasaError": 0,
+      "codigos": {
+        "200": 3003
+      },
+      "recursos": {
+        "auth": {
+          "cpuProm": 11.4,
+          "cpuMax": 18.9,
+          "memMaxMB": 174.2
+        },
+        "inventory": {
+          "cpuProm": 13.2,
+          "cpuMax": 18,
+          "memMaxMB": 207.8
+        },
+        "clients": {
+          "cpuProm": 21.9,
+          "cpuMax": 29.4,
+          "memMaxMB": 113.7
+        },
+        "orders": {
+          "cpuProm": 13.2,
+          "cpuMax": 24.5,
+          "memMaxMB": 142.3
+        },
+        "payments": {
+          "cpuProm": 0.1,
+          "cpuMax": 2,
+          "memMaxMB": 83.1
+        },
+        "graphql-gateway": {
+          "cpuProm": 50.7,
+          "cpuMax": 82.4,
+          "memMaxMB": 193.5
+        },
+        "api-gateway": {
+          "cpuProm": 33.6,
+          "cpuMax": 44,
+          "memMaxMB": 213.7
+        }
+      },
+      "objetivo": {
+        "p95": 800,
+        "rps": 10
+      },
+      "cumple": true
+    },
+    {
+      "nombre": "crearPedido",
+      "concurrencia": 5,
+      "duracionSeg": 10,
+      "solicitudes": 1307,
+      "rps": 130.4,
+      "p50": 36.7,
+      "p95": 56.1,
+      "p99": 85.5,
+      "maxMs": 140.8,
+      "errores": 0,
+      "tasaError": 0,
+      "codigos": {
+        "201": 1307
+      },
+      "recursos": {
+        "auth": {
+          "cpuProm": 8.3,
+          "cpuMax": 12,
+          "memMaxMB": 174.2
+        },
+        "inventory": {
+          "cpuProm": 33.2,
+          "cpuMax": 38,
+          "memMaxMB": 209.2
+        },
+        "clients": {
+          "cpuProm": 14.1,
+          "cpuMax": 41.2,
+          "memMaxMB": 117.1
+        },
+        "orders": {
+          "cpuProm": 55.1,
+          "cpuMax": 68,
+          "memMaxMB": 193.2
+        },
+        "payments": {
+          "cpuProm": 0.2,
+          "cpuMax": 2,
+          "memMaxMB": 83.2
+        },
+        "graphql-gateway": {
+          "cpuProm": 2.7,
+          "cpuMax": 29.4,
+          "memMaxMB": 193.8
+        },
+        "api-gateway": {
+          "cpuProm": 24.9,
+          "cpuMax": 32,
+          "memMaxMB": 214.2
+        }
+      },
+      "objetivo": {
+        "p95": 1000,
+        "rps": 2
+      },
+      "cumple": true
+    }
+  ]
+}

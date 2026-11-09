@@ -50,6 +50,18 @@ escribir('svc_token_gateway_inventory.txt', token());
 escribir('svc_token_gateway_clients.txt', token());
 escribir('svc_token_gateway_auth.txt', token());
 escribir('svc_token_clients_auth.txt', token());
+escribir('svc_token_gateway_orders.txt', token());
+escribir('svc_token_gateway_payments.txt', token());
+escribir('svc_token_gateway_graphql.txt', token());
+escribir('svc_token_orders_inventory.txt', token());
+escribir('svc_token_orders_clients.txt', token());
+escribir('svc_token_payments_orders.txt', token());
+escribir('svc_token_graphql_orders.txt', token());
+escribir('svc_token_graphql_inventory.txt', token());
+escribir('svc_token_graphql_clients.txt', token());
+
+// Secreto compartido con el proveedor de pagos (adaptador de prueba): firma los avisos.
+escribir('payments_webhook_secret.txt', token());
 
 // Contraseña inicial del administrador (se muestra una sola vez).
 const adminPass = `Adm${crypto.randomBytes(9).toString('base64url')}9`;

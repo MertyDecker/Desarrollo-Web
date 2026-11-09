@@ -27,12 +27,18 @@ services:
       INVENTORY_URL: http://inventory:3001
       CLIENTS_URL: http://clients:3002
       AUTH_URL: http://auth:3003
+      ORDERS_URL: http://orders:3004
+      PAYMENTS_URL: http://payments:3005
+      GRAPHQL_URL: http://graphql-gateway:3006
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5500}
       JWT_PUBLIC_KEY_FILE: /run/secrets/jwt_public_key
       SVC_TOKEN_INVENTORY_FILE: /run/secrets/svc_token_gateway_inventory
       SVC_TOKEN_CLIENTS_FILE: /run/secrets/svc_token_gateway_clients
       SVC_TOKEN_AUTH_FILE: /run/secrets/svc_token_gateway_auth
-    secrets: [jwt_public_key, svc_token_gateway_inventory, svc_token_gateway_clients, svc_token_gateway_auth]
+      SVC_TOKEN_ORDERS_FILE: /run/secrets/svc_token_gateway_orders
+      SVC_TOKEN_PAYMENTS_FILE: /run/secrets/svc_token_gateway_payments
+      SVC_TOKEN_GRAPHQL_FILE: /run/secrets/svc_token_gateway_graphql
+    secrets: [jwt_public_key, svc_token_gateway_inventory, svc_token_gateway_clients, svc_token_gateway_auth, svc_token_gateway_orders, svc_token_gateway_payments, svc_token_gateway_graphql]
     ports:
       - "127.0.0.1:${GATEWAY_PORT:-8080}:8080"
     networks: [public, private]
@@ -40,6 +46,9 @@ services:
       inventory: { condition: service_healthy }
       clients: { condition: service_healthy }
       auth: { condition: service_healthy }
+      orders: { condition: service_healthy }
+      payments: { condition: service_healthy }
+      graphql-gateway: { condition: service_healthy }
     restart: unless-stopped
 
   # ---------------------------------------------------------------- servicios privados
@@ -50,7 +59,9 @@ services:
       MONGO_URL: mongodb://${MONGO_INVENTORY_USER:?falta en .env}:${MONGO_INVENTORY_PASSWORD:?falta en .env}@mongo-inventory:27017/${MONGO_INVENTORY_DB:-inventory_db}
       SEED_ON_START: "true"
       SVC_TOKEN_GATEWAY_FILE: /run/secrets/svc_token_gateway_inventory
-    secrets: [svc_token_gateway_inventory]
+      SVC_TOKEN_ORDERS_FILE: /run/secrets/svc_token_orders_inventory
+      SVC_TOKEN_GRAPHQL_FILE: /run/secrets/svc_token_graphql_inventory
+    secrets: [svc_token_gateway_inventory, svc_token_orders_inventory, svc_token_graphql_inventory]
     depends_on:
       mongo-inventory: { condition: service_healthy }
     networks: [private]
@@ -65,7 +76,9 @@ services:
       MAIL_ADAPTER: dev
       SVC_TOKEN_GATEWAY_FILE: /run/secrets/svc_token_gateway_clients
       SVC_TOKEN_CLIENTS_AUTH_FILE: /run/secrets/svc_token_clients_auth
-    secrets: [svc_token_gateway_clients, svc_token_clients_auth]
+      SVC_TOKEN_ORDERS_FILE: /run/secrets/svc_token_orders_clients
+      SVC_TOKEN_GRAPHQL_FILE: /run/secrets/svc_token_graphql_clients
+    secrets: [svc_token_gateway_clients, svc_token_clients_auth, svc_token_orders_clients, svc_token_graphql_clients]
     depends_on:
       mongo-clients: { condition: service_healthy }
       auth: { condition: service_healthy }
@@ -85,6 +98,62 @@ services:
     secrets: [jwt_private_key, admin_password, svc_token_gateway_auth, svc_token_clients_auth]
     depends_on:
       mongo-auth: { condition: service_healthy }
+    networks: [private]
+    restart: unless-stopped
+
+  orders:
+    build: ./services/orders
+    environment:
+      PORT: 3004
+      MONGO_URL: mongodb://${MONGO_ORDERS_USER:?falta en .env}:${MONGO_ORDERS_PASSWORD:?falta en .env}@mongo-orders:27017/${MONGO_ORDERS_DB:-orders_db}
+      INVENTORY_URL: http://inventory:3001
+      CLIENTS_URL: http://clients:3002
+      SVC_TOKEN_GATEWAY_FILE: /run/secrets/svc_token_gateway_orders
+      SVC_TOKEN_PAYMENTS_FILE: /run/secrets/svc_token_payments_orders
+      SVC_TOKEN_GRAPHQL_FILE: /run/secrets/svc_token_graphql_orders
+      SVC_TOKEN_ORDERS_INVENTORY_FILE: /run/secrets/svc_token_orders_inventory
+      SVC_TOKEN_ORDERS_CLIENTS_FILE: /run/secrets/svc_token_orders_clients
+    secrets: [svc_token_gateway_orders, svc_token_payments_orders, svc_token_graphql_orders, svc_token_orders_inventory, svc_token_orders_clients]
+    depends_on:
+      mongo-orders: { condition: service_healthy }
+      inventory: { condition: service_healthy }
+      clients: { condition: service_healthy }
+    networks: [private]
+    restart: unless-stopped
+
+  payments:
+    build: ./services/payments
+    environment:
+      PORT: 3005
+      MONGO_URL: mongodb://${MONGO_PAYMENTS_USER:?falta en .env}:${MONGO_PAYMENTS_PASSWORD:?falta en .env}@mongo-payments:27017/${MONGO_PAYMENTS_DB:-payments_db}
+      ORDERS_URL: http://orders:3004
+      PAYMENTS_WEBHOOK_SECRET_FILE: /run/secrets/payments_webhook_secret
+      SVC_TOKEN_GATEWAY_FILE: /run/secrets/svc_token_gateway_payments
+      SVC_TOKEN_PAYMENTS_ORDERS_FILE: /run/secrets/svc_token_payments_orders
+    secrets: [payments_webhook_secret, svc_token_gateway_payments, svc_token_payments_orders]
+    depends_on:
+      mongo-payments: { condition: service_healthy }
+      orders: { condition: service_healthy }
+    networks: [private]
+    restart: unless-stopped
+
+  # GraphQL Gateway: privado, sin base de datos propia. Solo agrega contratos internos.
+  graphql-gateway:
+    build: ./services/graphql-gateway
+    environment:
+      PORT: 3006
+      ORDERS_URL: http://orders:3004
+      INVENTORY_URL: http://inventory:3001
+      CLIENTS_URL: http://clients:3002
+      SVC_TOKEN_GATEWAY_FILE: /run/secrets/svc_token_gateway_graphql
+      SVC_TOKEN_GRAPHQL_ORDERS_FILE: /run/secrets/svc_token_graphql_orders
+      SVC_TOKEN_GRAPHQL_INVENTORY_FILE: /run/secrets/svc_token_graphql_inventory
+      SVC_TOKEN_GRAPHQL_CLIENTS_FILE: /run/secrets/svc_token_graphql_clients
+    secrets: [svc_token_gateway_graphql, svc_token_graphql_orders, svc_token_graphql_inventory, svc_token_graphql_clients]
+    depends_on:
+      orders: { condition: service_healthy }
+      inventory: { condition: service_healthy }
+      clients: { condition: service_healthy }
     networks: [private]
     restart: unless-stopped
 
@@ -134,6 +203,36 @@ services:
     networks: [private]
     restart: unless-stopped
 
+  mongo-orders:
+    image: mongo:7
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root_orders
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ORDERS_ROOT_PASSWORD:?falta en .env}
+      MONGO_INITDB_DATABASE: ${MONGO_ORDERS_DB:-orders_db}
+      APP_DB_USER: ${MONGO_ORDERS_USER}
+      APP_DB_PASSWORD: ${MONGO_ORDERS_PASSWORD}
+    volumes:
+      - mongo-orders-data:/data/db
+      - ./infra/mongo/init-app-user.sh:/docker-entrypoint-initdb.d/init-app-user.sh:ro
+    healthcheck: *mongo-healthcheck
+    networks: [private]
+    restart: unless-stopped
+
+  mongo-payments:
+    image: mongo:7
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root_payments
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PAYMENTS_ROOT_PASSWORD:?falta en .env}
+      MONGO_INITDB_DATABASE: ${MONGO_PAYMENTS_DB:-payments_db}
+      APP_DB_USER: ${MONGO_PAYMENTS_USER}
+      APP_DB_PASSWORD: ${MONGO_PAYMENTS_PASSWORD}
+    volumes:
+      - mongo-payments-data:/data/db
+      - ./infra/mongo/init-app-user.sh:/docker-entrypoint-initdb.d/init-app-user.sh:ro
+    healthcheck: *mongo-healthcheck
+    networks: [private]
+    restart: unless-stopped
+
 networks:
   public: {}
   private:
@@ -143,6 +242,8 @@ volumes:
   mongo-inventory-data:
   mongo-clients-data:
   mongo-auth-data:
+  mongo-orders-data:
+  mongo-payments-data:
 
 # Secretos montados como archivos en /run/secrets/<nombre> SOLO en los
 # contenedores que los declaran. Se generan con scripts/generar-secretos.js.
@@ -161,3 +262,23 @@ secrets:
     file: ./secrets/svc_token_gateway_auth.txt
   svc_token_clients_auth:
     file: ./secrets/svc_token_clients_auth.txt
+  svc_token_gateway_orders:
+    file: ./secrets/svc_token_gateway_orders.txt
+  svc_token_gateway_payments:
+    file: ./secrets/svc_token_gateway_payments.txt
+  svc_token_gateway_graphql:
+    file: ./secrets/svc_token_gateway_graphql.txt
+  svc_token_orders_inventory:
+    file: ./secrets/svc_token_orders_inventory.txt
+  svc_token_orders_clients:
+    file: ./secrets/svc_token_orders_clients.txt
+  svc_token_payments_orders:
+    file: ./secrets/svc_token_payments_orders.txt
+  svc_token_graphql_orders:
+    file: ./secrets/svc_token_graphql_orders.txt
+  svc_token_graphql_inventory:
+    file: ./secrets/svc_token_graphql_inventory.txt
+  svc_token_graphql_clients:
+    file: ./secrets/svc_token_graphql_clients.txt
+  payments_webhook_secret:
+    file: ./secrets/payments_webhook_secret.txt

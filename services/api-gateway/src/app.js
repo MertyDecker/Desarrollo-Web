@@ -27,6 +27,7 @@ const { verificarJwt } = require('./jwt');
  * @param config.corsOrigin     origen permitido del frontend (o false)
  * @param config.timeoutMs      tiempo máximo de espera hacia un servicio
  * @param config.limiteGlobal   solicitudes por minuto por IP (por defecto 120)
+ * @param config.factorLimites  multiplicador de todos los límites (1; solo la prueba de carga lo sube)
  */
 async function buildApp({ config, logger = false, ahora = () => Date.now() }) {
   const { publicKeyPem, upstreams, serviceTokens } = config;
@@ -52,11 +53,12 @@ async function buildApp({ config, logger = false, ahora = () => Date.now() }) {
     // Lista con un solo origen: la cabecera solo se envía si el origen coincide.
     origin: config.corsOrigin ? [config.corsOrigin] : false,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    allowedHeaders: ['content-type', 'authorization', 'x-request-id']
+    allowedHeaders: ['content-type', 'authorization', 'x-request-id', 'idempotency-key'],
+    exposedHeaders: ['x-request-id', 'idempotent-replay']
   });
 
   await app.register(rateLimit, {
-    max: config.limiteGlobal ?? 120,
+    max: (config.limiteGlobal ?? 120) * (config.factorLimites ?? 1),
     timeWindow: '1 minute',
     errorResponseBuilder: () => ({ statusCode: 429, error: 'Demasiadas solicitudes. Intenta en un momento.' })
   });
@@ -140,6 +142,10 @@ async function buildApp({ config, logger = false, ahora = () => Date.now() }) {
           headers['x-token-exp'] = String(request.usuario.exp);
         }
       }
+      for (const nombre of ruta.cabeceras || []) {
+        const v = request.headers[nombre];
+        if (typeof v === 'string' && v.length <= 256) headers[nombre] = v;
+      }
       let body;
       if (request.body !== undefined && request.body !== null) {
         headers['content-type'] = 'application/json';
@@ -164,10 +170,12 @@ async function buildApp({ config, logger = false, ahora = () => Date.now() }) {
 
       // Un 401 del servicio significa que la credencial ENTRE servicios no
       // calza: es un problema de integración, no del usuario.
-      if (res.status >= 500 || res.status === 401) {
+      if (res.status >= 500 || (res.status === 401 && !ruta.propagar401)) {
         request.log.error({ servicio, status: res.status }, 'respuesta de error de un servicio interno');
         return reply.code(502).send({ error: 'Servicio no disponible' });
       }
+      const replay = res.headers.get('idempotent-replay');
+      if (replay) reply.header('idempotent-replay', replay);
       if (res.status === 204) return reply.code(204).send();
       const texto = await res.text();
       reply.code(res.status).type('application/json; charset=utf-8');
@@ -179,7 +187,7 @@ async function buildApp({ config, logger = false, ahora = () => Date.now() }) {
     app.route({
       method: ruta.metodo,
       url: ruta.ruta,
-      config: ruta.limite ? { rateLimit: { max: ruta.limite, timeWindow: '1 minute' } } : {},
+      config: ruta.limite ? { rateLimit: { max: ruta.limite * (config.factorLimites ?? 1), timeWindow: '1 minute' } } : {},
       preHandler: ruta.acceso === 'anonimo' ? undefined : autorizar(ruta),
       handler: reenviar(ruta)
     });

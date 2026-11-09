@@ -1,0 +1,19 @@
+{
+  "name": "graphql-gateway",
+  "version": "0.1.0",
+  "description": "GraphQL Gateway interno de Fukusuke Sushi: agrega orders, inventory y clients con autorización por recurso y campo.",
+  "private": true,
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test \"test/**/*.test.js\""
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "fastify": "^5.12.8",
+    "graphql": "^16.11.0"
+  }
+}

@@ -1,7 +1,7 @@
 'use strict';
 
 const Fastify = require('fastify');
-const { instalarAutenticacionDeServicio } = require('./serviceAuth');
+const { instalarAutenticacionDeServicio, soloLlamadores } = require('./serviceAuth');
 
 const CATEGORIAS = ['rolls', 'nigiri', 'entradas', 'promociones', 'compartir'];
 const ID_PATTERN = '^[a-f0-9]{24}$';
@@ -107,8 +107,15 @@ function buildApp({ repo, serviceTokens, logger = false }) {
     reply.header('x-request-id', request.id);
   });
 
-  // Toda ruta (salvo /health) exige la identidad del gateway.
+  // Toda ruta (salvo /health) exige la identidad de un servicio conocido.
+  // Cada consumidor tiene su propio token y solo puede usar ciertas rutas:
+  //   gateway  -> catálogo público y administración
+  //   orders   -> lectura por lote y reservas de stock
+  //   graphql  -> lectura por lote (agregaciones)
   instalarAutenticacionDeServicio(app, serviceTokens);
+  const soloGateway = soloLlamadores('gateway');
+  const lecturaInterna = soloLlamadores('orders', 'graphql');
+  const soloOrders = soloLlamadores('orders');
 
   app.setErrorHandler((error, request, reply) => {
     if (error.validation) {
@@ -130,9 +137,11 @@ function buildApp({ repo, serviceTokens, logger = false }) {
   app.get(
     '/products',
     {
+      preHandler: soloGateway,
       schema: {
         querystring: {
           type: 'object',
+          additionalProperties: false, // un parámetro desconocido (p. ej. available[$ne]) -> 400
           properties: {
             available: { type: 'boolean' },
             category: { type: 'string', enum: CATEGORIAS }
@@ -152,6 +161,7 @@ function buildApp({ repo, serviceTokens, logger = false }) {
   app.get(
     '/products/:id',
     {
+      preHandler: soloGateway,
       schema: {
         params: paramsId,
         response: { 200: productoPublico, 404: errorSchema }
@@ -171,7 +181,7 @@ function buildApp({ repo, serviceTokens, logger = false }) {
   app.post(
     '/products',
     {
-      preHandler: requiereAdmin,
+      preHandler: [soloGateway, requiereAdmin],
       schema: {
         body: cuerpoProducto,
         response: { 201: productoAdmin }
@@ -187,7 +197,7 @@ function buildApp({ repo, serviceTokens, logger = false }) {
   app.put(
     '/products/:id',
     {
-      preHandler: requiereAdmin,
+      preHandler: [soloGateway, requiereAdmin],
       schema: {
         params: paramsId,
         body: cuerpoProducto,
@@ -207,7 +217,7 @@ function buildApp({ repo, serviceTokens, logger = false }) {
   app.delete(
     '/products/:id',
     {
-      preHandler: requiereAdmin,
+      preHandler: [soloGateway, requiereAdmin],
       schema: {
         params: paramsId,
         response: { 404: errorSchema }
@@ -216,6 +226,82 @@ function buildApp({ repo, serviceTokens, logger = false }) {
     async (request, reply) => {
       const ok = await repo.deactivate(request.params.id);
       if (!ok) return reply.code(404).send({ error: 'Producto no encontrado' });
+      return reply.code(204).send();
+    }
+  );
+
+  // ---- Lectura por lote (interna) ------------------------------------------
+  // Una sola llamada para varios productos: orders la usa para fijar precios y
+  // el GraphQL Gateway para describir los ítems de un pedido (evita N+1).
+  // Incluye productos dados de baja para que los pedidos antiguos conserven
+  // su descripción.
+  app.get(
+    '/internal/products',
+    {
+      preHandler: lecturaInterna,
+      schema: {
+        querystring: {
+          type: 'object',
+          required: ['ids'],
+          properties: { ids: { type: 'string', pattern: '^[a-f0-9]{24}(,[a-f0-9]{24}){0,49}$' } }
+        },
+        response: {
+          200: {
+            type: 'array',
+            items: { type: 'object', properties: { ...productoPublico.properties, activo: { type: 'boolean' } } }
+          }
+        }
+      }
+    },
+    async (request) => {
+      const ids = [...new Set(request.query.ids.split(','))];
+      const productos = await repo.getMany(ids);
+      return productos.map((p) => ({ ...aPublico(p), activo: p.activo }));
+    }
+  );
+
+  // ---- S06 Reservar stock (interna, solo orders) ---------------------------
+  // Idempotente por pedidoId: repetir la misma reserva no descuenta dos veces.
+  app.post(
+    '/products/:id/reservations',
+    {
+      preHandler: soloOrders,
+      schema: {
+        params: paramsId,
+        body: {
+          type: 'object',
+          required: ['pedidoId', 'cantidad'],
+          additionalProperties: false,
+          properties: {
+            pedidoId: { type: 'string', minLength: 8, maxLength: 64 },
+            cantidad: { type: 'integer', minimum: 1, maximum: 50 }
+          }
+        }
+      }
+    },
+    async (request, reply) => {
+      const r = await repo.reservar(request.params.id, request.body.pedidoId, request.body.cantidad);
+      if (r.ok) return reply.code(201).send({ productoId: request.params.id, pedidoId: request.body.pedidoId, cantidad: r.cantidad, repetida: !!r.repetida });
+      if (r.motivo === 'no_existe') return reply.code(404).send({ error: 'Producto no encontrado' });
+      return reply.code(409).send({ error: 'Stock insuficiente' });
+    }
+  );
+
+  // ---- S07 Liberar una reserva (interna, solo orders) ----------------------
+  app.delete(
+    '/products/:id/reservations/:pedidoId',
+    {
+      preHandler: soloOrders,
+      schema: {
+        params: {
+          type: 'object',
+          required: ['id', 'pedidoId'],
+          properties: { id: { type: 'string', pattern: ID_PATTERN }, pedidoId: { type: 'string', minLength: 8, maxLength: 64 } }
+        }
+      }
+    },
+    async (request, reply) => {
+      await repo.liberar(request.params.id, request.params.pedidoId);
       return reply.code(204).send();
     }
   );
