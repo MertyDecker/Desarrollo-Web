@@ -125,6 +125,10 @@ async function main() {
 
   // ---------------------------------------------------------------- registro y login
   const A = await crearCliente('cliente.a', 'Providencia');
+  if (A.reg.status === 429) {
+    console.error('El gateway limita los registros a 5 por minuto por IP (protección activa). Espera 1 minuto y vuelve a ejecutar.');
+    process.exit(1);
+  }
   const B = await crearCliente('cliente.b', 'Maipú');
   registrar('P03', 'M1', 'Registro de cliente (RUN válido, contraseña con hash)', 201, A.reg, A.reg.status === 201 && A.reg.json?.estado === 'pendiente_validacion');
   registrar('P04', 'M1', 'Validación de correo con código', 200, A.ver, A.ver.status === 200);
@@ -279,7 +283,7 @@ async function main() {
   }
   registrar('P47', 'M7', 'Acceso directo a orders sin token de servicio', 401, directo,
     directo === null || directo.status === 401, directo === null ? 'puerto no expuesto (Docker): conexión rechazada' : 'responde 401 sin datos');
-  const grande = await pedir('POST', '/clients', { crudo: JSON.stringify({ nombre: 'x'.repeat(200 * 1024) }) });
+  const grande = await pedir('POST', '/orders', { crudo: JSON.stringify({ nombre: 'x'.repeat(200 * 1024) }) });
   registrar('P48', 'M5', 'Cuerpo mayor a 100 KB', 413, grande, grande.status === 413 || grande.status === 400);
   const malJson = await pedir('POST', '/auth/login', { crudo: '{"correo": "a", ' });
   registrar('P49', 'M5', 'JSON mal formado: error controlado sin detalles internos', 400, malJson, malJson.status === 400 && !JSON.stringify(malJson.json).includes('at '));

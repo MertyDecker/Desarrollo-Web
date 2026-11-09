@@ -1,5 +1,5 @@
 {
-  "fecha": "2026-11-09T02:48:22.795Z",
+  "fecha": "2026-11-09T02:56:27.477Z",
   "base": "http://localhost:8080",
   "resultados": [
     {
@@ -9,7 +9,7 @@
       "esperado": 200,
       "obtenido": 200,
       "solicitud": "GET /api/v1/products?available=true",
-      "requestId": "req-3",
+      "requestId": "req-2e",
       "ok": true,
       "nota": "sin stock exacto en la respuesta"
     },
@@ -20,7 +20,7 @@
       "esperado": 400,
       "obtenido": 400,
       "solicitud": "GET /api/v1/products?available[$ne]=x",
-      "requestId": "req-4",
+      "requestId": "req-2f",
       "ok": true,
       "nota": ""
     },
@@ -31,7 +31,7 @@
       "esperado": 201,
       "obtenido": 201,
       "solicitud": "POST /api/v1/clients",
-      "requestId": "req-5",
+      "requestId": "req-2g",
       "ok": true,
       "nota": ""
     },
@@ -42,7 +42,7 @@
       "esperado": 200,
       "obtenido": 200,
       "solicitud": "POST /api/v1/clients/verify-email",
-      "requestId": "req-6",
+      "requestId": "req-2h",
       "ok": true,
       "nota": ""
     },
@@ -53,7 +53,7 @@
       "esperado": 200,
       "obtenido": 200,
       "solicitud": "POST /api/v1/auth/login",
-      "requestId": "req-7",
+      "requestId": "req-2i",
       "ok": true,
       "nota": ""
     },
@@ -64,7 +64,7 @@
       "esperado": 409,
       "obtenido": 409,
       "solicitud": "POST /api/v1/clients",
-      "requestId": "req-d",
+      "requestId": "req-2o",
       "ok": true,
       "nota": ""
     },
@@ -75,7 +75,7 @@
       "esperado": 400,
       "obtenido": 400,
       "solicitud": "POST /api/v1/clients",
-      "requestId": "req-e",
+      "requestId": "req-2p",
       "ok": true,
       "nota": ""
     },
@@ -86,7 +86,7 @@
       "esperado": 401,
       "obtenido": 401,
       "solicitud": "POST /api/v1/auth/login",
-      "requestId": "req-f",
+      "requestId": "req-2q",
       "ok": true,
       "nota": ""
     },
@@ -97,7 +97,7 @@
       "esperado": 400,
       "obtenido": 400,
       "solicitud": "POST /api/v1/auth/login",
-      "requestId": "req-h",
+      "requestId": "req-2s",
       "ok": true,
       "nota": ""
     },
@@ -108,7 +108,7 @@
       "esperado": 200,
       "obtenido": 200,
       "solicitud": "POST /api/v1/auth/login",
-      "requestId": "req-i",
+      "requestId": "req-2t",
       "ok": true,
       "nota": ""
     },
@@ -119,7 +119,7 @@
       "esperado": 401,
       "obtenido": 401,
       "solicitud": "GET /api/v1/orders",
-      "requestId": "req-j",
+      "requestId": "req-2u",
       "ok": true,
       "nota": ""
     },
@@ -130,7 +130,7 @@
       "esperado": 401,
       "obtenido": 401,
       "solicitud": "POST /api/v1/products",
-      "requestId": "req-k",
+      "requestId": "req-2v",
       "ok": true,
       "nota": ""
     },
@@ -141,7 +141,7 @@
       "esperado": 401,
       "obtenido": 401,
       "solicitud": "POST /api/v1/products",
-      "requestId": "req-l",
+      "requestId": "req-2w",
       "ok": true,
       "nota": ""
     },
@@ -152,7 +152,7 @@
       "esperado": 401,
       "obtenido": 401,
       "solicitud": "POST /api/v1/products",
-      "requestId": "req-m",
+      "requestId": "req-2x",
       "ok": true,
       "nota": ""
     },
@@ -163,7 +163,7 @@
       "esperado": 403,
       "obtenido": 403,
       "solicitud": "POST /api/v1/products",
-      "requestId": "req-n",
+      "requestId": "req-2y",
       "ok": true,
       "nota": ""
     },
@@ -174,7 +174,7 @@
       "esperado": 403,
       "obtenido": 403,
       "solicitud": "DELETE /api/v1/products/6af133d383e0f93ffe1cfd51",
-      "requestId": "req-o",
+      "requestId": "req-2z",
       "ok": true,
       "nota": ""
     },
@@ -185,7 +185,7 @@
       "esperado": 201,
       "obtenido": 201,
       "solicitud": "POST /api/v1/products",
-      "requestId": "req-p",
+      "requestId": "req-30",
       "ok": true,
       "nota": ""
     },
@@ -196,7 +196,7 @@
       "esperado": 400,
       "obtenido": 400,
       "solicitud": "POST /api/v1/products",
-      "requestId": "req-q",
+      "requestId": "req-31",
       "ok": true,
       "nota": ""
     },
@@ -207,7 +207,7 @@
       "esperado": 201,
       "obtenido": 201,
       "solicitud": "POST /api/v1/orders",
-      "requestId": "req-r",
+      "requestId": "req-32",
       "ok": true,
       "nota": "total 19180"
     },
@@ -218,7 +218,7 @@
       "esperado": 200,
       "obtenido": 200,
       "solicitud": "POST /api/v1/orders",
-      "requestId": "req-s",
+      "requestId": "req-33",
       "ok": true,
       "nota": ""
     },
@@ -229,7 +229,7 @@
       "esperado": 400,
       "obtenido": 400,
       "solicitud": "POST /api/v1/orders",
-      "requestId": "req-u",
+      "requestId": "req-35",
       "ok": true,
       "nota": ""
     },
@@ -240,7 +240,7 @@
       "esperado": 400,
       "obtenido": 400,
       "solicitud": "POST /api/v1/orders",
-      "requestId": "req-v",
+      "requestId": "req-36",
       "ok": true,
       "nota": ""
     },
@@ -250,8 +250,8 @@
       "descripcion": "Cliente A consulta su propio pedido",
       "esperado": 200,
       "obtenido": 200,
-      "solicitud": "GET /api/v1/orders/509fb71f-68a8-404d-bcac-f4de5e7d99a9",
-      "requestId": "req-w",
+      "solicitud": "GET /api/v1/orders/f14971e8-38c1-4a0d-875a-0e988e9bc231",
+      "requestId": "req-37",
       "ok": true,
       "nota": ""
     },
@@ -261,8 +261,8 @@
       "descripcion": "Cliente B consulta el pedido de A (recurso ajeno)",
       "esperado": 404,
       "obtenido": 404,
-      "solicitud": "GET /api/v1/orders/509fb71f-68a8-404d-bcac-f4de5e7d99a9",
-      "requestId": "req-x",
+      "solicitud": "GET /api/v1/orders/f14971e8-38c1-4a0d-875a-0e988e9bc231",
+      "requestId": "req-38",
       "ok": true,
       "nota": "sin datos del pedido"
     },
@@ -273,7 +273,7 @@
       "esperado": 201,
       "obtenido": 201,
       "solicitud": "POST /api/v1/orders",
-      "requestId": "req-y",
+      "requestId": "req-39",
       "ok": true,
       "nota": "envío cobrado fuera del radio"
     },
@@ -284,7 +284,7 @@
       "esperado": 409,
       "obtenido": 409,
       "solicitud": "POST /api/v1/orders",
-      "requestId": "req-10",
+      "requestId": "req-3b",
       "ok": true,
       "nota": ""
     },
@@ -294,8 +294,8 @@
       "descripcion": "Cancelar el pedido recupera el stock",
       "esperado": 200,
       "obtenido": 200,
-      "solicitud": "POST /api/v1/orders/e78d1506-e66e-4ba3-aada-575c0f879e73/cancel",
-      "requestId": "req-11",
+      "solicitud": "POST /api/v1/orders/011fe68f-f3fe-4b37-937f-31c959d4ef56/cancel",
+      "requestId": "req-3c",
       "ok": true,
       "nota": ""
     },
@@ -305,8 +305,8 @@
       "descripcion": "Pago con monto/estado enviados por el navegador",
       "esperado": 400,
       "obtenido": 400,
-      "solicitud": "POST /api/v1/orders/509fb71f-68a8-404d-bcac-f4de5e7d99a9/payments",
-      "requestId": "req-13",
+      "solicitud": "POST /api/v1/orders/f14971e8-38c1-4a0d-875a-0e988e9bc231/payments",
+      "requestId": "req-3e",
       "ok": true,
       "nota": ""
     },
@@ -316,8 +316,8 @@
       "descripcion": "Cliente B intenta pagar el pedido de A",
       "esperado": 404,
       "obtenido": 404,
-      "solicitud": "POST /api/v1/orders/509fb71f-68a8-404d-bcac-f4de5e7d99a9/payments",
-      "requestId": "req-14",
+      "solicitud": "POST /api/v1/orders/f14971e8-38c1-4a0d-875a-0e988e9bc231/payments",
+      "requestId": "req-3f",
       "ok": true,
       "nota": ""
     },
@@ -327,8 +327,8 @@
       "descripcion": "Cliente inicia el pago: monto fijado por el servidor",
       "esperado": 201,
       "obtenido": 201,
-      "solicitud": "POST /api/v1/orders/509fb71f-68a8-404d-bcac-f4de5e7d99a9/payments",
-      "requestId": "req-15",
+      "solicitud": "POST /api/v1/orders/f14971e8-38c1-4a0d-875a-0e988e9bc231/payments",
+      "requestId": "req-3g",
       "ok": true,
       "nota": ""
     },
@@ -339,7 +339,7 @@
       "esperado": 401,
       "obtenido": 401,
       "solicitud": "POST /api/v1/payments/webhook",
-      "requestId": "req-16",
+      "requestId": "req-3h",
       "ok": true,
       "nota": ""
     },
@@ -350,7 +350,7 @@
       "esperado": 401,
       "obtenido": 401,
       "solicitud": "POST /api/v1/payments/webhook",
-      "requestId": "req-17",
+      "requestId": "req-3i",
       "ok": true,
       "nota": "pedido sigue pendiente_pago"
     },
@@ -361,7 +361,7 @@
       "esperado": 200,
       "obtenido": 200,
       "solicitud": "POST /api/v1/payments/webhook",
-      "requestId": "req-19",
+      "requestId": "req-3k",
       "ok": true,
       "nota": ""
     },
@@ -372,7 +372,7 @@
       "esperado": 200,
       "obtenido": 200,
       "solicitud": "POST /api/v1/payments/webhook",
-      "requestId": "req-1b",
+      "requestId": "req-3m",
       "ok": true,
       "nota": ""
     },
@@ -382,8 +382,8 @@
       "descripcion": "Segundo cobro de un pedido ya pagado",
       "esperado": 409,
       "obtenido": 409,
-      "solicitud": "POST /api/v1/orders/509fb71f-68a8-404d-bcac-f4de5e7d99a9/payments",
-      "requestId": "req-1c",
+      "solicitud": "POST /api/v1/orders/f14971e8-38c1-4a0d-875a-0e988e9bc231/payments",
+      "requestId": "req-3n",
       "ok": true,
       "nota": ""
     },
@@ -393,8 +393,8 @@
       "descripcion": "Cliente B consulta el pago de A",
       "esperado": 404,
       "obtenido": 404,
-      "solicitud": "GET /api/v1/payments/a56ef0c8-196c-441c-a139-891d169b7ec7",
-      "requestId": "req-1d",
+      "solicitud": "GET /api/v1/payments/b86069e7-5dc9-4e08-8fe2-1f81414c1e7f",
+      "requestId": "req-3o",
       "ok": true,
       "nota": ""
     },
@@ -404,8 +404,8 @@
       "descripcion": "Transición de estado no permitida (pagado -> entregado)",
       "esperado": 409,
       "obtenido": 409,
-      "solicitud": "PATCH /api/v1/orders/509fb71f-68a8-404d-bcac-f4de5e7d99a9/status",
-      "requestId": "req-1e",
+      "solicitud": "PATCH /api/v1/orders/f14971e8-38c1-4a0d-875a-0e988e9bc231/status",
+      "requestId": "req-3p",
       "ok": true,
       "nota": ""
     },
@@ -415,8 +415,8 @@
       "descripcion": "Administrador pasa el pedido a en_preparacion",
       "esperado": 200,
       "obtenido": 200,
-      "solicitud": "PATCH /api/v1/orders/509fb71f-68a8-404d-bcac-f4de5e7d99a9/status",
-      "requestId": "req-1f",
+      "solicitud": "PATCH /api/v1/orders/f14971e8-38c1-4a0d-875a-0e988e9bc231/status",
+      "requestId": "req-3q",
       "ok": true,
       "nota": ""
     },
@@ -426,8 +426,8 @@
       "descripcion": "Cliente intenta cambiar el estado del pedido",
       "esperado": 403,
       "obtenido": 403,
-      "solicitud": "PATCH /api/v1/orders/509fb71f-68a8-404d-bcac-f4de5e7d99a9/status",
-      "requestId": "req-1g",
+      "solicitud": "PATCH /api/v1/orders/f14971e8-38c1-4a0d-875a-0e988e9bc231/status",
+      "requestId": "req-3r",
       "ok": true,
       "nota": ""
     },
@@ -438,7 +438,7 @@
       "esperado": 200,
       "obtenido": 200,
       "solicitud": "POST /api/v1/graphql",
-      "requestId": "req-1h",
+      "requestId": "req-3s",
       "ok": true,
       "nota": ""
     },
@@ -449,7 +449,7 @@
       "esperado": 200,
       "obtenido": 200,
       "solicitud": "POST /api/v1/graphql",
-      "requestId": "req-1i",
+      "requestId": "req-3t",
       "ok": true,
       "nota": "data null, NO_ENCONTRADO"
     },
@@ -460,7 +460,7 @@
       "esperado": 200,
       "obtenido": 200,
       "solicitud": "POST /api/v1/graphql",
-      "requestId": "req-1j",
+      "requestId": "req-3u",
       "ok": true,
       "nota": ""
     },
@@ -471,7 +471,7 @@
       "esperado": 400,
       "obtenido": 400,
       "solicitud": "POST /api/v1/graphql",
-      "requestId": "req-1l",
+      "requestId": "req-3w",
       "ok": true,
       "nota": ""
     },
@@ -482,7 +482,7 @@
       "esperado": 400,
       "obtenido": 400,
       "solicitud": "POST /api/v1/graphql",
-      "requestId": "req-1m",
+      "requestId": "req-3x",
       "ok": true,
       "nota": ""
     },
@@ -493,7 +493,7 @@
       "esperado": 200,
       "obtenido": 200,
       "solicitud": "POST /api/v1/graphql",
-      "requestId": "req-1n",
+      "requestId": "req-3y",
       "ok": true,
       "nota": ""
     },
@@ -504,7 +504,7 @@
       "esperado": 404,
       "obtenido": 404,
       "solicitud": "GET /api/v1/internal/tokens/abc",
-      "requestId": "req-1o",
+      "requestId": "req-3z",
       "ok": true,
       "nota": ""
     },
@@ -515,7 +515,7 @@
       "esperado": 401,
       "obtenido": 401,
       "solicitud": "GET http://127.0.0.1:3004/orders",
-      "requestId": "req-a",
+      "requestId": "req-m",
       "ok": true,
       "nota": "responde 401 sin datos"
     },
@@ -525,8 +525,8 @@
       "descripcion": "Cuerpo mayor a 100 KB",
       "esperado": 413,
       "obtenido": 413,
-      "solicitud": "POST /api/v1/clients",
-      "requestId": "req-1q",
+      "solicitud": "POST /api/v1/orders",
+      "requestId": "req-41",
       "ok": true,
       "nota": ""
     },
@@ -537,7 +537,7 @@
       "esperado": 400,
       "obtenido": 400,
       "solicitud": "POST /api/v1/auth/login",
-      "requestId": "req-1r",
+      "requestId": "req-42",
       "ok": true,
       "nota": ""
     },
@@ -548,7 +548,7 @@
       "esperado": 401,
       "obtenido": 401,
       "solicitud": "GET /api/v1/clients/me",
-      "requestId": "req-1t",
+      "requestId": "req-44",
       "ok": true,
       "nota": ""
     },
@@ -559,7 +559,7 @@
       "esperado": 429,
       "obtenido": 429,
       "solicitud": "POST /api/v1/auth/login",
-      "requestId": "req-1x",
+      "requestId": "req-48",
       "ok": true,
       "nota": ""
     }

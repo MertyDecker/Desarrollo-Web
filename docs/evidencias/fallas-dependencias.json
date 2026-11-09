@@ -1,0 +1,430 @@
+{
+  "fecha": "2026-11-09T02:55:16.263Z",
+  "pasos": [
+    {
+      "paso": "1. GraphQL con todo funcionando",
+      "req": "POST /api/v1/graphql resumenPedido",
+      "status": 200,
+      "ms": 69,
+      "rid": "req-8",
+      "cuerpo": {
+        "data": {
+          "resumenPedido": {
+            "id": "e17fcdc3-a7f6-412b-9383-daadac93b43e",
+            "estado": "pendiente_pago",
+            "total": 16180,
+            "items": [
+              {
+                "nombreAlComprar": "California Roll",
+                "producto": {
+                  "nombre": "California Roll",
+                  "descripcion": "Auténtica ensalada de cangrejo, pepino fresco y palta envuelta en alga tostada premium."
+                }
+              },
+              {
+                "nombreAlComprar": "Dragon Roll",
+                "producto": {
+                  "nombre": "Dragon Roll",
+                  "descripcion": "Unagi cremoso y pepino crocante cubierto con capas de palta y salsa tare dulce."
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "paso": "2. inventory congelado: catálogo",
+      "req": "GET /api/v1/products",
+      "status": 504,
+      "ms": 5007,
+      "rid": "req-9",
+      "cuerpo": {
+        "error": "El servicio tardó demasiado en responder"
+      }
+    },
+    {
+      "paso": "3. inventory congelado: GraphQL (respuesta parcial)",
+      "req": "POST /api/v1/graphql resumenPedido",
+      "status": 200,
+      "ms": 2024,
+      "rid": "req-a",
+      "cuerpo": {
+        "data": {
+          "resumenPedido": {
+            "id": "e17fcdc3-a7f6-412b-9383-daadac93b43e",
+            "estado": "pendiente_pago",
+            "total": 16180,
+            "items": [
+              {
+                "nombreAlComprar": "California Roll",
+                "producto": null
+              },
+              {
+                "nombreAlComprar": "Dragon Roll",
+                "producto": null
+              }
+            ]
+          }
+        },
+        "errors": [
+          {
+            "message": "Inventario no disponible: la descripción del producto no se pudo obtener.",
+            "path": [
+              "resumenPedido",
+              "items",
+              0,
+              "producto"
+            ],
+            "extensions": {
+              "code": "DEPENDENCIA_NO_DISPONIBLE"
+            }
+          },
+          {
+            "message": "Inventario no disponible: la descripción del producto no se pudo obtener.",
+            "path": [
+              "resumenPedido",
+              "items",
+              1,
+              "producto"
+            ],
+            "extensions": {
+              "code": "DEPENDENCIA_NO_DISPONIBLE"
+            }
+          }
+        ],
+        "extensions": {
+          "parcial": true
+        }
+      }
+    },
+    {
+      "paso": "4. inventory congelado: nuevo pedido",
+      "req": "POST /api/v1/orders",
+      "status": 502,
+      "ms": 3024,
+      "rid": "req-b",
+      "cuerpo": {
+        "error": "Servicio no disponible"
+      }
+    },
+    {
+      "paso": "5. inventory congelado: mis pedidos (no depende de inventory)",
+      "req": "GET /api/v1/orders",
+      "status": 200,
+      "ms": 15,
+      "rid": "req-c",
+      "cuerpo": [
+        {
+          "id": "e17fcdc3-a7f6-412b-9383-daadac93b43e",
+          "estado": "pendiente_pago",
+          "items": [
+            {
+              "productoId": "6af133d383e0f93ffe1cfd51",
+              "nombre": "California Roll",
+              "precioUnitario": 5990,
+              "cantidad": 1,
+              "subtotal": 5990
+            },
+            {
+              "productoId": "6af133d383e0f93ffe1cfd49",
+              "nombre": "Dragon Roll",
+              "precioUnitario": 8990,
+              "cantidad": 1,
+              "subtotal": 8990
+            }
+          ],
+          "direccion": {
+            "id": "30ddb331-8fbc-4663-8f76-62f00303a67f",
+            "direccion": "Av. Providencia 300",
+            "comuna": "Providencia",
+            "region": "Metropolitana"
+          },
+          "subtotal": 14980,
+          "envio": 0,
+          "empaque": 1200,
+          "total": 16180,
+          "pagoId": null,
+          "creadoEn": "2026-11-09T02:54:58.054Z",
+          "historial": [
+            {
+              "estado": "pendiente_pago",
+              "fecha": "2026-11-09T02:54:58.054Z",
+              "por": "cliente"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "paso": "6. inventory restaurado: reintento del catálogo",
+      "req": "GET /api/v1/products",
+      "status": 200,
+      "ms": 7,
+      "rid": "req-d",
+      "cuerpo": [
+        {
+          "id": "6af133d383e0f93ffe1cfd51",
+          "nombre": "California Roll",
+          "descripcion": "Auténtica ensalada de cangrejo, pepino fresco y palta envuelta en alga tostada premium.",
+          "precio": 5990,
+          "categoria": "rolls",
+          "imagen": null,
+          "disponible": true
+        },
+        {
+          "id": "6af133d383e0f93ffe1cfd49",
+          "nombre": "Dragon Roll",
+          "descripcion": "Unagi cremoso y pepino crocante cubierto con capas de palta y salsa tare dulce.",
+          "precio": 8990,
+          "categoria": "rolls",
+          "imagen": null,
+          "disponible": true
+        },
+        {
+          "id": "6af1344e21acc12b2d1be743",
+          "nombre": "Gyozas 461102",
+          "descripcion": "5 unidades",
+          "precio": 4500,
+          "categoria": "entradas",
+          "imagen": null,
+          "disponible": true
+        },
+        {
+          "id": "6af13475d729255d3cdfa715",
+          "nombre": "Gyozas 500868",
+          "descripcion": "5 unidades",
+          "precio": 4500,
+          "categoria": "entradas",
+          "imagen": null,
+          "disponible": true
+        },
+        {
+          "id": "6af134da0cc5802582b3df4b",
+          "nombre": "Producto carga 602002",
+          "descripcion": "",
+          "precio": 1000,
+          "categoria": "promociones",
+          "imagen": null,
+          "disponible": true
+        },
+        {
+          "id": "6af133d383e0f93ffe1cfd4f",
+          "nombre": "Rainbow Roll",
+          "descripcion": "Base california cubierta con láminas de salmón, atún, camarón y palta cremosa.",
+          "precio": 9490,
+          "categoria": "rolls",
+          "imagen": null,
+          "disponible": true
+        },
+        {
+          "id": "6af133d383e0f93ffe1cfd4b",
+          "nombre": "Salmon Nigiri",
+          "descripcion": "Salmón crudo premium cortado a mano, elegantemente dispuesto sobre arroz de sushi sazonado.",
+          "precio": 6490,
+          "categoria": "nigiri",
+          "imagen": null,
+          "disponible": true
+        },
+        {
+          "id": "6af133d383e0f93ffe1cfd4d",
+          "nombre": "Spicy Tuna Roll",
+          "descripcion": "Atún picante finamente picado, pepino y aderezo de mayo-chili de la casa.",
+          "precio": 7990,
+          "categoria": "rolls",
+          "imagen": null,
+          "disponible": true
+        },
+        {
+          "id": "6af133d383e0f93ffe1cfd53",
+          "nombre": "Unagi Roll",
+          "descripcion": "Anguila de agua dulce ahumada con glaseado de soya dulce, palta y sésamo tostado.",
+          "precio": 8490,
+          "categoria": "rolls",
+          "imagen": null,
+          "disponible": true
+        }
+      ]
+    },
+    {
+      "paso": "7. inventory restaurado: GraphQL completo otra vez",
+      "req": "POST /api/v1/graphql resumenPedido",
+      "status": 200,
+      "ms": 20,
+      "rid": "req-e",
+      "cuerpo": {
+        "data": {
+          "resumenPedido": {
+            "id": "e17fcdc3-a7f6-412b-9383-daadac93b43e",
+            "estado": "pendiente_pago",
+            "total": 16180,
+            "items": [
+              {
+                "nombreAlComprar": "California Roll",
+                "producto": {
+                  "nombre": "California Roll",
+                  "descripcion": "Auténtica ensalada de cangrejo, pepino fresco y palta envuelta en alga tostada premium."
+                }
+              },
+              {
+                "nombreAlComprar": "Dragon Roll",
+                "producto": {
+                  "nombre": "Dragon Roll",
+                  "descripcion": "Unagi cremoso y pepino crocante cubierto con capas de palta y salsa tare dulce."
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "paso": "8. auth congelado: ruta protegida (falla cerrado)",
+      "req": "GET /api/v1/orders",
+      "status": 503,
+      "ms": 5003,
+      "rid": "req-f",
+      "cuerpo": {
+        "error": "Servicio temporalmente no disponible"
+      }
+    },
+    {
+      "paso": "9. auth congelado: catálogo público sigue disponible",
+      "req": "GET /api/v1/products",
+      "status": 200,
+      "ms": 6,
+      "rid": "req-g",
+      "cuerpo": [
+        {
+          "id": "6af133d383e0f93ffe1cfd51",
+          "nombre": "California Roll",
+          "descripcion": "Auténtica ensalada de cangrejo, pepino fresco y palta envuelta en alga tostada premium.",
+          "precio": 5990,
+          "categoria": "rolls",
+          "imagen": null,
+          "disponible": true
+        },
+        {
+          "id": "6af133d383e0f93ffe1cfd49",
+          "nombre": "Dragon Roll",
+          "descripcion": "Unagi cremoso y pepino crocante cubierto con capas de palta y salsa tare dulce.",
+          "precio": 8990,
+          "categoria": "rolls",
+          "imagen": null,
+          "disponible": true
+        },
+        {
+          "id": "6af1344e21acc12b2d1be743",
+          "nombre": "Gyozas 461102",
+          "descripcion": "5 unidades",
+          "precio": 4500,
+          "categoria": "entradas",
+          "imagen": null,
+          "disponible": true
+        },
+        {
+          "id": "6af13475d729255d3cdfa715",
+          "nombre": "Gyozas 500868",
+          "descripcion": "5 unidades",
+          "precio": 4500,
+          "categoria": "entradas",
+          "imagen": null,
+          "disponible": true
+        },
+        {
+          "id": "6af134da0cc5802582b3df4b",
+          "nombre": "Producto carga 602002",
+          "descripcion": "",
+          "precio": 1000,
+          "categoria": "promociones",
+          "imagen": null,
+          "disponible": true
+        },
+        {
+          "id": "6af133d383e0f93ffe1cfd4f",
+          "nombre": "Rainbow Roll",
+          "descripcion": "Base california cubierta con láminas de salmón, atún, camarón y palta cremosa.",
+          "precio": 9490,
+          "categoria": "rolls",
+          "imagen": null,
+          "disponible": true
+        },
+        {
+          "id": "6af133d383e0f93ffe1cfd4b",
+          "nombre": "Salmon Nigiri",
+          "descripcion": "Salmón crudo premium cortado a mano, elegantemente dispuesto sobre arroz de sushi sazonado.",
+          "precio": 6490,
+          "categoria": "nigiri",
+          "imagen": null,
+          "disponible": true
+        },
+        {
+          "id": "6af133d383e0f93ffe1cfd4d",
+          "nombre": "Spicy Tuna Roll",
+          "descripcion": "Atún picante finamente picado, pepino y aderezo de mayo-chili de la casa.",
+          "precio": 7990,
+          "categoria": "rolls",
+          "imagen": null,
+          "disponible": true
+        },
+        {
+          "id": "6af133d383e0f93ffe1cfd53",
+          "nombre": "Unagi Roll",
+          "descripcion": "Anguila de agua dulce ahumada con glaseado de soya dulce, palta y sésamo tostado.",
+          "precio": 8490,
+          "categoria": "rolls",
+          "imagen": null,
+          "disponible": true
+        }
+      ]
+    },
+    {
+      "paso": "10. auth restaurado",
+      "req": "GET /api/v1/orders",
+      "status": 200,
+      "ms": 11,
+      "rid": "req-h",
+      "cuerpo": [
+        {
+          "id": "e17fcdc3-a7f6-412b-9383-daadac93b43e",
+          "estado": "pendiente_pago",
+          "items": [
+            {
+              "productoId": "6af133d383e0f93ffe1cfd51",
+              "nombre": "California Roll",
+              "precioUnitario": 5990,
+              "cantidad": 1,
+              "subtotal": 5990
+            },
+            {
+              "productoId": "6af133d383e0f93ffe1cfd49",
+              "nombre": "Dragon Roll",
+              "precioUnitario": 8990,
+              "cantidad": 1,
+              "subtotal": 8990
+            }
+          ],
+          "direccion": {
+            "id": "30ddb331-8fbc-4663-8f76-62f00303a67f",
+            "direccion": "Av. Providencia 300",
+            "comuna": "Providencia",
+            "region": "Metropolitana"
+          },
+          "subtotal": 14980,
+          "envio": 0,
+          "empaque": 1200,
+          "total": 16180,
+          "pagoId": null,
+          "creadoEn": "2026-11-09T02:54:58.054Z",
+          "historial": [
+            {
+              "estado": "pendiente_pago",
+              "fecha": "2026-11-09T02:54:58.054Z",
+              "por": "cliente"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

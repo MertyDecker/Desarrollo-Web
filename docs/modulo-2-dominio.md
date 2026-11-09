@@ -1,7 +1,7 @@
 # Módulo 2 — Clases y cardinalidades del dominio
 
 Diagrama en Mermaid (editable como texto; GitHub lo dibuja automáticamente).
-Las entidades marcadas *(avance 9)* están diseñadas y se implementan en ese avance.
+Todas las entidades del diagrama están implementadas (avances 8 y 9).
 
 ## 1. Diagrama de clases del dominio y servicios públicos
 
@@ -184,7 +184,7 @@ classDiagram
 - **Modelo interno vs. DTO.** `stock`, `activo`, `passwordHash`, `codigoVerificacion` e `intentosFallidos` nunca
   salen en respuestas públicas. El catálogo expone `disponible` (calculado), no el stock exacto.
 - **Fecha de nacimiento y sexo (P02) se eliminan del modelo.** El caso no los necesita para vender ni despachar;
-  guardarlos solo aumentaría los datos personales a proteger (ver Módulo 7). El formulario se ajusta en el avance 11.
+  guardarlos solo aumentaría los datos personales a proteger (ver Módulo 7). El formulario del frontend se ajustará en la integración con el frontend (Evaluación 3).
 
 ## 4. Correspondencia operación UML ↔ servicio
 
@@ -194,5 +194,5 @@ classDiagram
 | ClientService.registrar / validarCorreo | S08, S09 | Implementado (clients + auth) |
 | AuthService.iniciarSesion / cerrarSesion | S10, S11 | Implementado (auth) |
 | ClientService.miPerfil / editarPerfil / agregarDireccion / misDirecciones | S12–S15 | Implementado (clients) |
-| OrderService.* | S16–S20 | Avance 9 |
-| PaymentService.* | S21–S23 | Avance 9 |
+| OrderService.* | S16–S20 | Implementado |
+| PaymentService.* | S21–S23 | Implementado |
