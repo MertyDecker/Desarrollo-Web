@@ -257,6 +257,27 @@ function buildApp({ repo, authClient, mailer, serviceTokens, ahora = () => Date.
     return c.direcciones || [];
   });
 
+  // ---- Contratos internos ----------------------------------------------------
+  // orders confirma que la dirección de despacho pertenece al cliente del pedido.
+  app.get(
+    '/internal/clients/:id/addresses/:dirId',
+    { preHandler: soloLlamadores('orders') },
+    async (request, reply) => {
+      const c = await repo.buscarPorId(request.params.id);
+      const dir = c && (c.direcciones || []).find((d) => d.id === request.params.dirId);
+      if (!dir) return reply.code(404).send({ error: 'Dirección no encontrada' });
+      return dir;
+    }
+  );
+
+  // GraphQL Gateway: datos de contacto para el resumen del pedido. La decisión
+  // de qué campos ve cada rol la toma el gateway GraphQL por campo.
+  app.get('/internal/clients/:id', { preHandler: soloLlamadores('graphql') }, async (request, reply) => {
+    const c = await repo.buscarPorId(request.params.id);
+    if (!c) return reply.code(404).send({ error: 'Cliente no encontrado' });
+    return { id: c.id, nombre: c.nombre, correo: c.correo, telefono: c.telefono, run: c.run };
+  });
+
   return app;
 }
 

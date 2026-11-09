@@ -21,11 +21,29 @@ gateway. Controles comunes a todas las filas: límite global de 120 solicitudes/
 | S13 | Externo | PUT | `/api/v1/clients/me` | cliente | clients `PUT /clients/me` | JWT; solo campos editables | `svc_token_gateway_clients` |
 | S14 | Externo | POST | `/api/v1/clients/me/addresses` | cliente | clients `POST /clients/me/addresses` | JWT; máx. 5 direcciones | `svc_token_gateway_clients` |
 | S15 | Externo | GET | `/api/v1/clients/me/addresses` | cliente | clients `GET /clients/me/addresses` | JWT | `svc_token_gateway_clients` |
+| S16 | Externo | POST | `/api/v1/orders` | cliente | orders `POST /orders` | JWT; reenvía solo `Idempotency-Key`; 20/min | `svc_token_gateway_orders` |
+| S17 | Externo | GET | `/api/v1/orders` | cliente, admin | orders `GET /orders` | paginación `limit ≤ 50`; el filtro por dueño lo pone orders | `svc_token_gateway_orders` |
+| S18 | Externo | GET | `/api/v1/orders/{id}` | cliente, admin | orders `GET /orders/{id}` | ajeno → 404 sin datos | `svc_token_gateway_orders` |
+| S19 | Externo | POST | `/api/v1/orders/{id}/cancel` | cliente | orders `POST /orders/{id}/cancel` | solo `pendiente_pago`; libera stock | `svc_token_gateway_orders` |
+| S20 | Externo | PATCH | `/api/v1/orders/{id}/status` | admin | orders `PATCH /orders/{id}/status` | transiciones válidas (409) | `svc_token_gateway_orders` |
+| S21 | Externo | POST | `/api/v1/orders/{id}/payments` | cliente | payments `POST /orders/{id}/payments` | monto fijado por el servidor; 20/min | `svc_token_gateway_payments` |
+| S22 | Externo | GET | `/api/v1/payments/{id}` | cliente, admin | payments `GET /payments/{id}` | ajeno → 404 | `svc_token_gateway_payments` |
+| S23 | Externo | POST | `/api/v1/payments/webhook` | proveedor (sin JWT) | payments `POST /webhook` | firma HMAC + marca de tiempo en payments; reenvía solo `x-signature` y `x-timestamp`; 60/min | `svc_token_gateway_payments` |
+| S24 | Externo | POST | `/api/v1/graphql` | cliente, admin | graphql-gateway `POST /graphql` | JWT; 30/min; límites GraphQL en el servicio | `svc_token_gateway_graphql` |
 | — | Interno | GET | *(no publicada)* | solo gateway | auth `GET /internal/tokens/{jti}` | consulta de revocación en cada ruta protegida | `svc_token_gateway_auth` |
 | — | Interno | POST/DELETE | *(no publicada)* | solo clients | auth `/internal/credentials...` | crear, activar y compensar credenciales | `svc_token_clients_auth` |
+| S06/S07 | Interno | POST/DELETE | *(no publicada)* | solo orders | inventory `/products/{id}/reservations[/{pedidoId}]` | idempotente por pedido | `svc_token_orders_inventory` |
+| — | Interno | GET | *(no publicada)* | orders, graphql | inventory `GET /internal/products?ids=` | lote de hasta 50 ids | `svc_token_orders_inventory`, `svc_token_graphql_inventory` |
+| — | Interno | GET | *(no publicada)* | solo orders | clients `GET /internal/clients/{id}/addresses/{dir}` | confirma dirección del titular | `svc_token_orders_clients` |
+| — | Interno | GET | *(no publicada)* | solo graphql | clients `GET /internal/clients/{id}` | contacto; graphql filtra campos por rol | `svc_token_graphql_clients` |
+| — | Interno | GET | *(no publicada)* | payments, graphql | orders `GET /internal/orders/{id}`, `GET /internal/orders?clienteId=` | lectura | `svc_token_payments_orders`, `svc_token_graphql_orders` |
+| — | Interno | POST | *(no publicada)* | solo payments | orders `POST /internal/orders/{id}/paid` | monto debe coincidir con el total | `svc_token_payments_orders` |
 
-Las rutas de pedidos, pagos, GraphQL (`POST /graphql`, con autorización por operación y campo) y, si aplica,
-gRPC se agregan a esta matriz en los avances 9 y 10.
+**Operaciones GraphQL** (S24, todas de lectura; no hay mutations porque las reglas transaccionales viven en orders
+y payments): `resumenPedido(id)` y `misPedidos(limite, desde)`. Autorización por recurso (pedido propio) y por
+campo (`run` solo admin). Detalle en el Módulo 8.
+
+**gRPC:** no se usa (decisión y medición en el Módulo 9).
 
 ## 2. Credencial del usuario vs. credencial entre sistemas
 
@@ -47,7 +65,13 @@ gRPC se agregan a esta matriz en los avances 9 y 10.
 | `svc_token_clients_auth` | Token de servicio | `generar-secretos.js` | clients, auth | Crear y activar credenciales | Docker secret en ambos | auth acepta a clients solo en `/internal/credentials...` | Ídem |
 | `admin_password` | Contraseña inicial | `generar-secretos.js` | auth (solo al crear la cuenta) | Primera cuenta de administrador | Docker secret, solo en auth | Se guarda como hash; el archivo solo se lee al crear el admin | Cambiar la contraseña y borrar el archivo |
 | `MONGO_*_PASSWORD` | Credencial de base de datos | El equipo, en `.env` | Cada servicio y su Mongo | Acceso de la app a **su** base | `.env` (ignorado por git) | Usuario `readWrite` solo sobre la base de ese servicio | Cambiar en `.env` y recrear el volumen |
-| Clave del proveedor de pagos *(avance 9)* | Secreto de integración | Proveedor | Solo payments | Verificar avisos y crear cobros | Docker secret, solo en payments | Solo la cuenta de comercio de prueba | Según el proveedor |
+| `svc_token_gateway_orders` / `_payments` / `_graphql` | Token de servicio | `generar-secretos.js` | gateway y el servicio destino | Probar que la llamada viene del gateway | Docker secret en ambos | Solo rutas de ese servicio | `--rotar` y reiniciar |
+| `svc_token_orders_inventory` | Token de servicio | `generar-secretos.js` | orders, inventory | Precios por lote y reservas | Docker secret en ambos | inventory acepta a orders solo en `/internal/products` y reservas; no administra productos | Ídem |
+| `svc_token_orders_clients` | Token de servicio | `generar-secretos.js` | orders, clients | Confirmar dirección del titular | Docker secret en ambos | Solo `/internal/clients/{id}/addresses/{dir}` | Ídem |
+| `svc_token_payments_orders` | Token de servicio | `generar-secretos.js` | payments, orders | Leer pedido y marcarlo pagado | Docker secret en ambos | Solo `/internal/orders/{id}` y `/paid` | Ídem |
+| `svc_token_graphql_{orders,inventory,clients}` | Token de servicio | `generar-secretos.js` | graphql-gateway y cada servicio | Lecturas para agregaciones | Docker secret en ambos | Solo rutas internas de lectura | Ídem |
+| `payments_webhook_secret` | Secreto de integración (HMAC) | `generar-secretos.js` (en producción lo entrega el proveedor) | payments y el proveedor | Verificar que el aviso de pago viene del proveedor | Docker secret, solo en payments | Solo avisos de pago; no permite crear cobros | `--rotar`; avisos firmados con el anterior quedan inválidos |
+| `mongo_local_*` *(solo modo local)* | Credencial de base de datos | `scripts/local.js` | Cada servicio | Igual que `MONGO_*_PASSWORD` en el arranque sin Docker | `./secrets` (ignorado por git) | readWrite solo sobre la base del servicio | Borrar el archivo y `local-data/` |
 
 **Por qué Docker secrets y no HashiCorp Vault:** el entorno es local y reproducible con Docker Compose. Docker
 secrets cumple lo que se exige: los valores no están en el código, ni en el repositorio, ni en variables de entorno
@@ -63,6 +87,9 @@ reemplazar por un proveedor de Vault sin tocar las políticas.
   porque su firma ya no se verifica con la nueva clave pública.
 - **El almacén de secretos no está disponible** (falta un archivo en `./secrets`): el servicio **no arranca**
   (`leerSecreto` lanza un error) en vez de funcionar sin autenticación.
+- **Se filtra `payments_webhook_secret`:** alguien podría fabricar avisos de pago. Mitigación: el aviso debe
+  coincidir con un cobro existente y con su monto exacto, y orders exige que el monto sea el total del pedido;
+  igual se rota el secreto de inmediato (`--rotar`) y se revisan los pagos aprobados en la ventana expuesta.
 - **auth no responde:** el gateway rechaza las rutas protegidas con 503 (no deja pasar tokens sin revisar la
   revocación); el catálogo público sigue funcionando.
 
@@ -71,6 +98,10 @@ reemplazar por un proveedor de Vault sin tocar las políticas.
 - Ningún secreto en rutas, parámetros de consulta, repositorio, capturas ni logs (el gateway oculta
   `authorization` y `x-service-token` en sus logs).
 - El mismo secreto nunca se usa en dos tramos distintos.
+- **Arranque sin Docker (`npm run local`):** se usan los mismos archivos de `./secrets`; cada proceso recibe por
+  variable de entorno solo la **ruta** de los archivos que necesita. Los servicios internos escuchan solo en
+  `127.0.0.1` y, aunque alguien en el mismo equipo llegue a su puerto, sin su token de servicio responden 401
+  (prueba P47).
 - TLS: en el entorno local el tráfico interno va por una red privada de Docker sin salida externa. En un despliegue
   real, el gateway se publica detrás de HTTPS (proxy inverso con certificado) y los tramos internos usan TLS.
   Esta limitación del entorno local queda declarada.

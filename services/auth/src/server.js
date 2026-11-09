@@ -7,6 +7,7 @@ const { leerSecreto } = require('./secrets');
 const { hashPassword } = require('./password');
 
 const PORT = Number(process.env.PORT || 3003);
+const HOST = process.env.HOST || '0.0.0.0';
 
 // Crea la cuenta de administrador una sola vez. La contraseña viene de un
 // secreto montado por Docker, nunca del código ni del repositorio.
@@ -51,7 +52,7 @@ async function main() {
   process.on('SIGTERM', cerrar);
   process.on('SIGINT', cerrar);
 
-  await app.listen({ port: PORT, host: '0.0.0.0' });
+  await app.listen({ port: PORT, host: HOST });
 }
 
 main().catch((err) => {

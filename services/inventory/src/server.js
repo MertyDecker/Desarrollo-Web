@@ -2,11 +2,12 @@
 
 const mongoose = require('mongoose');
 const { buildApp } = require('./app');
-const { repoMongo, Producto } = require('./repo.mongo');
+const { repoMongo, Producto, Reserva } = require('./repo.mongo');
 const { sembrar } = require('./seed');
 const { leerSecreto } = require('./secrets');
 
 const PORT = Number(process.env.PORT || 3001);
+const HOST = process.env.HOST || '0.0.0.0';
 const MONGO_URL = process.env.MONGO_URL;
 
 async function main() {
@@ -17,14 +18,18 @@ async function main() {
   }
 
   await mongoose.connect(MONGO_URL, { serverSelectionTimeoutMS: 10000 });
-  await Producto.init(); // asegura índices
+  await Promise.all([Producto.init(), Reserva.init()]); // asegura índices
 
   if (process.env.SEED_ON_START === 'true') {
     const creados = await sembrar(Producto);
     console.log(`Seed de desarrollo: ${creados} producto(s) nuevo(s).`);
   }
 
-  const serviceTokens = { gateway: leerSecreto('SVC_TOKEN_GATEWAY_FILE') };
+  const serviceTokens = {
+    gateway: leerSecreto('SVC_TOKEN_GATEWAY_FILE'),
+    orders: leerSecreto('SVC_TOKEN_ORDERS_FILE'),
+    graphql: leerSecreto('SVC_TOKEN_GRAPHQL_FILE')
+  };
   const app = buildApp({ repo: repoMongo, serviceTokens, logger: true });
 
   const cerrar = async (senal) => {
@@ -36,7 +41,7 @@ async function main() {
   process.on('SIGTERM', () => cerrar('SIGTERM'));
   process.on('SIGINT', () => cerrar('SIGINT'));
 
-  await app.listen({ port: PORT, host: '0.0.0.0' });
+  await app.listen({ port: PORT, host: HOST });
 }
 
 main().catch((err) => {

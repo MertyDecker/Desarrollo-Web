@@ -1,0 +1,58 @@
+# Schema del GraphQL Gateway interno de Fukusuke Sushi.
+# Solo lectura: las reglas transaccionales (crear, pagar, cancelar) siguen en
+# los servicios de negocio y se usan por REST a través del API Gateway.
+
+type Query {
+  "Resumen de un pedido: estado (orders) + productos (inventory) + contacto (clients)."
+  resumenPedido(id: ID!): ResumenPedido
+  "Pedidos del cliente autenticado, paginados (máximo 20 por página)."
+  misPedidos(limite: Int = 10, desde: Int = 0): [ResumenPedido!]!
+}
+
+type ResumenPedido {
+  id: ID!
+  estado: String!
+  subtotal: Int!
+  envio: Int!
+  empaque: Int!
+  total: Int!
+  creadoEn: String!
+  direccion: Direccion
+  items: [ItemPedido!]!
+  "Datos de contacto del titular. Algunos campos dependen del rol."
+  cliente: ClientePedido
+}
+
+type Direccion {
+  direccion: String!
+  comuna: String!
+  region: String!
+}
+
+type ItemPedido {
+  cantidad: Int!
+  precioUnitario: Int!
+  subtotal: Int!
+  "Nombre guardado al momento de la compra (lo conserva orders)."
+  nombreAlComprar: String!
+  "Descripción pública actual desde inventory. Es null si inventory no responde."
+  producto: Producto
+}
+
+type Producto {
+  id: ID!
+  nombre: String!
+  descripcion: String
+  categoria: String
+  imagen: String
+  disponible: Boolean!
+}
+
+type ClientePedido {
+  nombre: String!
+  correo: String!
+  "Solo el titular y el administrador."
+  telefono: String
+  "Solo el administrador (dato personal identificador)."
+  run: String
+}

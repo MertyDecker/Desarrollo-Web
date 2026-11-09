@@ -1,0 +1,21 @@
+{
+  "name": "fukusuke-backend",
+  "version": "1.0.0",
+  "description": "Backend de microservicios de Fukusuke Sushi Delivery: arranque local sin Docker y pruebas.",
+  "private": true,
+  "scripts": {
+    "local": "node scripts/local.js",
+    "pruebas": "node scripts/pruebas-unitarias.js",
+    "seguridad": "node scripts/pruebas-seguridad.js",
+    "carga": "node scripts/prueba-carga.js",
+    "pago": "node scripts/simular-pago.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "mongodb-memory-server-core": "^11.3.0",
+    "pidusage": "^4.1.0"
+  }
+}

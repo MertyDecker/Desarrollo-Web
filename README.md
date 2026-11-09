@@ -1,22 +1,65 @@
 # Fukusuke Sushi Delivery — backend de microservicios
 
-Proyecto de la Unidad 2: backend seguro integrado con el frontend responsivo de Fukusuke Sushi.
+Proyecto de la Unidad 2 (Evaluación 2): backend seguro construido a partir de los datos y eventos del frontend
+responsivo de Fukusuke Sushi. La conexión de las pantallas con la API corresponde a la Evaluación 3.
 
 ## Estructura
 
 ```
-frontend/              Páginas del sitio (por ahora index.html)
-services/api-gateway/  API Gateway: único punto público (puerto 8080)
-services/auth/         Autenticación: credenciales, sesiones y tokens JWT
-services/clients/      Clientes: registro, validación de correo, perfil y direcciones
-services/inventory/    Inventario: catálogo, disponibilidad y stock
-infra/                 Inicialización de las bases de datos
-scripts/               Generación de secretos locales
-docs/                  Informe por módulo, diagramas y mockups
-docker-compose.yml     Entorno local reproducible
+frontend/                 Páginas del sitio (Evaluación 1)
+services/api-gateway/     API Gateway: único punto público (puerto 8080)
+services/auth/            Credenciales, sesiones y tokens JWT (ES256)
+services/clients/         Registro, validación de correo, perfil y direcciones
+services/inventory/       Catálogo, disponibilidad, stock y reservas
+services/orders/          Pedidos, totales, estados e idempotencia
+services/payments/        Pagos y aviso firmado del proveedor
+services/graphql-gateway/ GraphQL Gateway privado (agregaciones de lectura)
+infra/                    Inicialización de las bases de datos (Docker)
+scripts/                  Arranque local, secretos, pruebas de seguridad y de carga
+docs/                     Informe por módulo, modelo C4, evidencias y mockups
+docker-compose.yml        Despliegue reproducible con redes pública y privada
 ```
 
-Pendientes: `orders` y `payments` (avance 9), GraphQL Gateway y decisión de gRPC/analítica (avance 10).
+## Cómo ejecutarlo
+
+Requisito: **Node.js 20 o superior** (https://nodejs.org, versión LTS). Docker es opcional.
+
+### Opción A: sin Docker
+
+```bash
+npm run local
+```
+
+Genera los secretos en `./secrets` (muestra la clave del administrador `admin@fukusuke.cl`), instala las
+dependencias, descarga y arranca MongoDB 7 con datos persistentes en `local-data/` y levanta los 7 servicios.
+El backend queda en **http://localhost:8080**. Detener: `Ctrl+C`.
+
+### Opción B: con Docker
+
+```bash
+cp .env.example .env        # en PowerShell: Copy-Item .env.example .env  (y cambiar las contraseñas)
+docker run --rm -v "${PWD}:/work" -w /work node:22-alpine node scripts/generar-secretos.js
+docker compose up --build
+```
+
+Solo el API Gateway queda publicado (`127.0.0.1:8080`). Los servicios y las bases están en una red interna.
+
+### Prueba rápida
+
+- http://localhost:8080/health
+- http://localhost:8080/api/v1/products?available=true
+
+Los códigos de verificación de correo quedan en `local-data/correos.log` (modo local) o en
+`docker compose logs clients` con la marca `[CORREO-SIMULADO]`.
+
+## Pruebas
+
+| Comando | Qué hace |
+|---|---|
+| `npm run pruebas` | Pruebas automatizadas de los 7 servicios (no necesita el backend en marcha) |
+| `npm run seguridad` | 51 pruebas de integración y ataque contra el backend en marcha; deja la evidencia en `docs/evidencias/resultado-pruebas.md` |
+| `npm run carga` | Prueba de carga (arrancar antes con `PRUEBA_CARGA=true npm run local`); reporte en `docs/evidencias/prueba-carga.md` |
+| `npm run pago -- <pagoId> <monto>` | Simula el aviso firmado del proveedor de pagos |
 
 ## Avances
 
@@ -24,9 +67,7 @@ Pendientes: `orders` y `payments` (avance 9), GraphQL Gateway y decisión de gRP
 |---|---|---|
 | 7 | Diseño base, servicio `inventory`, borrador del Módulo 1 | `avance-7-diseno-base` |
 | 8 | Dominio y sistemas (M2, M3), seguridad y API Gateway (M4, M5, M6): `auth`, `clients`, gateway y secretos | `avance-8-seguridad-gateway` |
-| 9 | Pedidos y pagos (`orders`, `payments`), privacidad y pruebas de seguridad (M7) | pendiente |
-| 10 | GraphQL Gateway interno (M8), gRPC y analítica (M9) | pendiente |
-| 11 | Integración final con el frontend, pruebas y entrega (M10) | pendiente |
+| 9 | `orders`, `payments`, GraphQL Gateway, arranque sin Docker, pruebas de seguridad y carga, M7–M10 y modelo C4 | `avance-9-pedidos-pagos-local` |
 
 ## Documentación
 
@@ -38,60 +79,16 @@ Pendientes: `orders` y `payments` (avance 9), GraphQL Gateway y decisión de gRP
 | 4 Stakeholders y permisos HTTP | `docs/modulo-4-permisos.md` |
 | 5 Clases del API Gateway | `docs/modulo-5-gateway.md` |
 | 6 Rutas y secretos de integración | `docs/modulo-6-rutas-secretos.md` |
+| 7 Datos sensibles y secretos del cliente | `docs/modulo-7-datos.md` |
+| 8 Separación privada y GraphQL | `docs/modulo-8-graphql.md` |
+| 9 Analítica y gRPC (ADR y carga) | `docs/modulo-9-analitica-grpc.md` |
+| 10 Backend completo e integración verificable | `docs/modulo-10-integracion.md` |
+| Modelo C4 (Structurizr DSL: C1, C2, C3, dinámicas y despliegue) | `docs/c4/fukusuke.dsl` |
+| Evidencias de ejecución | `docs/evidencias/` |
 
-## Cómo ejecutarlo
+## Seguridad (resumen)
 
-Requisitos: Docker Desktop. Node.js solo hace falta para correr las pruebas fuera de Docker.
-
-**1. Configuración** (una sola vez):
-
-```bash
-cp .env.example .env        # en PowerShell: Copy-Item .env.example .env
-# Edita .env y cambia las contraseñas de ejemplo.
-```
-
-**2. Secretos** (una sola vez; quedan en `./secrets`, que no se sube a GitHub):
-
-```bash
-docker run --rm -v "${PWD}:/work" -w /work node:22-alpine node scripts/generar-secretos.js
-```
-
-Muestra la contraseña del administrador (`admin@fukusuke.cl`); también queda en `secrets/admin_password.txt`.
-
-**3. Arranque:**
-
-```bash
-docker compose up --build
-```
-
-Solo el API Gateway queda publicado, en `http://localhost:8080`. Los servicios internos y las bases de datos no
-tienen puertos abiertos.
-
-**4. Prueba rápida** (otra terminal; en Windows usa `curl.exe`):
-
-```bash
-curl http://localhost:8080/health
-curl "http://localhost:8080/api/v1/products?available=true"
-```
-
-Para registrarse: `POST /api/v1/clients`. El código de verificación aparece en los logs de `clients` con la marca
-`[CORREO-SIMULADO]` (`docker compose logs clients`), porque en local no hay proveedor de correo real.
-
-Para detener: `Ctrl+C` y luego `docker compose down`. Para borrar también los datos: `docker compose down -v`.
-
-## Pruebas
-
-Cada servicio tiene sus pruebas automatizadas:
-
-```bash
-cd services/<servicio>
-npm ci
-npm test
-```
-
-## Seguridad
-
-- Los secretos viven en `./secrets` y `.env`, ambos ignorados por git. Solo `.env.example`, con valores de ejemplo, está en el repositorio.
-- La base de datos de cada servicio no publica puertos y solo la usa ese servicio.
-- Los servicios internos no se exponen al navegador: el único punto público es el API Gateway.
-- Cada par de servicios usa su propio token; los tokens de sesión se firman con ES256 (clave privada solo en auth).
+- Secretos en `./secrets` y `.env`, ambos ignorados por git. Cada servicio recibe solo los que usa.
+- Una base de datos por servicio, con usuario de permisos mínimos y sin puertos públicos.
+- El navegador solo habla con el API Gateway. Cada tramo entre servicios usa su propio token.
+- Los precios, totales y estados de pago los decide el servidor, nunca el navegador.

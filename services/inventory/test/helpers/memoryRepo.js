@@ -4,6 +4,7 @@
 // Solo se usa en las pruebas del servicio (no sustituye a la persistencia real).
 function crearRepoMemoria(semilla = []) {
   const items = new Map();
+  const reservas = new Map();
   let contador = 0;
   const nuevoId = () => (++contador).toString(16).padStart(24, '0');
 
@@ -42,6 +43,27 @@ function crearRepoMemoria(semilla = []) {
       const actual = items.get(id);
       if (!actual) return false;
       actual.activo = false;
+      return true;
+    },
+    async getMany(ids) {
+      return ids.map((id) => items.get(id)).filter(Boolean);
+    },
+    async reservar(productoId, pedidoId, cantidad) {
+      const clave = `${productoId}:${pedidoId}`;
+      const previa = reservas.get(clave);
+      if (previa) return previa.estado === 'activa' ? { ok: true, cantidad: previa.cantidad, repetida: true } : { ok: false, motivo: 'liberada' };
+      const p = items.get(productoId);
+      if (!p || !p.activo) return { ok: false, motivo: 'no_existe' };
+      if (p.stock < cantidad) return { ok: false, motivo: 'sin_stock' };
+      p.stock -= cantidad;
+      reservas.set(clave, { cantidad, estado: 'activa' });
+      return { ok: true, cantidad };
+    },
+    async liberar(productoId, pedidoId) {
+      const r = reservas.get(`${productoId}:${pedidoId}`);
+      if (!r || r.estado !== 'activa') return false;
+      r.estado = 'liberada';
+      items.get(productoId).stock += r.cantidad;
       return true;
     },
     _items: items

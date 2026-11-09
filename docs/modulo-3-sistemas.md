@@ -7,14 +7,15 @@ colaboran solo por contratos HTTP en la red privada, autenticados con un token d
 
 | Sistema | Responsabilidad | Datos que administra (autoridad) | Servicios | Dependencias | Contrato de integración | Credencial requerida | Respuesta ante fallos |
 |---|---|---|---|---|---|---|---|
-| **inventory** | Catálogo, disponibilidad y stock | Producto (precio oficial, stock, estado) | S01–S05; S06–S07 internos | — | REST interno `/products` | `svc_token_gateway_inventory` (gateway); en el avance 9 se suma uno para orders | Si cae: el catálogo responde 502 en el gateway; orders no acepta pedidos nuevos |
+| **inventory** | Catálogo, disponibilidad y stock | Producto (precio oficial, stock, estado) | S01–S05; S06–S07 internos | — | REST interno `/products` | `svc_token_gateway_inventory`, `svc_token_orders_inventory` (solo reservas y lectura por lote), `svc_token_graphql_inventory` (solo lectura por lote) | Si cae: el catálogo responde 502 en el gateway; orders responde 503 y no crea pedidos; GraphQL entrega respuesta parcial identificada |
 | **clients** | Registro, perfil y direcciones | Cliente, Direccion, CodigoVerificacion | S08, S09, S12–S15 | auth (crear y activar credencial) | REST interno `/clients/...` | `svc_token_gateway_clients`; usa `svc_token_clients_auth` hacia auth | Si auth no responde durante el registro, se deshace el cliente creado (compensación) y responde 503 |
 | **auth** | Credenciales, sesiones y tokens | Credencial (hash, rol, estado), TokenRevocado | S10, S11, internos de credenciales y revocación | — | REST interno `/login`, `/logout`, `/internal/...` | `svc_token_gateway_auth`, `svc_token_clients_auth`; firma con `jwt_private_key` | Si cae: el gateway rechaza rutas protegidas con 503 (falla cerrado); el catálogo público sigue funcionando |
-| **orders** *(avance 9)* | Creación y ciclo de vida del pedido | Pedido, DetallePedido (estado oficial del pedido) | S16–S20 | inventory (reservar stock) | REST interno `/orders` | token gateway→orders; token orders→inventory | Si inventory no responde: no confirma el pedido (no se arriesga a vender sin stock) |
-| **payments** *(avance 9)* | Inicio de pago y verificación del aviso del proveedor | Pago (estado del pago) | S21–S23 | orders (marcar pagado), proveedor de pagos | REST interno `/payments`; aviso firmado del proveedor | token gateway→payments; clave del proveedor (solo payments) | Aviso duplicado: idempotente por id de transacción; aviso con firma inválida: 401 |
-| **api-gateway** | Único punto público; autenticación, autorización, rutas | Ninguno (solo configuración) | Todas las rutas externas | inventory, clients, auth | Tabla de rutas `routes.js` | `jwt_public_key` y un token por cada destino | Servicio lento 504, caído 502, sin detalles internos |
+| **orders** | Creación y ciclo de vida del pedido, idempotencia | Pedido, DetallePedido (estado oficial del pedido, totales) | S16–S20; internos de lectura y "pagado" | inventory (precios, reservar y liberar stock), clients (dirección del titular) | REST interno `/orders`, `/internal/orders` | `svc_token_gateway_orders`; usa `svc_token_orders_inventory` y `svc_token_orders_clients` | Si inventory o clients no responde: 503 y no crea el pedido (no vende sin stock); reservas parciales se liberan |
+| **payments** | Inicio de pago y verificación del aviso del proveedor | Pago, EventoPago (estado oficial del pago) | S21–S23 | orders (leer pedido, marcar pagado), proveedor de pagos | REST interno `/orders/{id}/payments`, `/payments/{id}`, `/webhook` | `svc_token_gateway_payments`; usa `svc_token_payments_orders`; `payments_webhook_secret` | Aviso duplicado: idempotente por `eventoId`; firma inválida o vencida: 401; si orders no responde: 503 y el aviso no se marca procesado (el proveedor reintenta) |
+| **graphql-gateway** | Agregación de lectura para pantallas (resumen de pedido) | Ninguno (no tiene base de datos) | S24 | orders, inventory, clients (contratos internos) | `POST /graphql` interno | `svc_token_gateway_graphql`; usa `svc_token_graphql_{orders,inventory,clients}` | Dependencia caída: campos afectados en null, error con código y `extensions.parcial: true` |
+| **api-gateway** | Único punto público; autenticación, autorización, rutas | Ninguno (solo configuración) | Todas las rutas externas | inventory, clients, auth, orders, payments, graphql-gateway | Tabla de rutas `routes.js` | `jwt_public_key` y un token por cada destino | Servicio lento 504, caído 502, sin detalles internos |
 | Correo *(externo)* | Enviar el código de verificación | — | S08 | — | Adaptador `mailer.js` | En local: adaptador de prueba sin credencial | Si falla el envío, el registro queda pendiente y el error se registra |
-| Webpay / Servipag *(externo, avance 9)* | Cobro | Transacción en el proveedor | S21, S23 | — | Adaptador de prueba que preserva el contrato | Clave del comercio (solo payments) | Ver payments |
+| Webpay / Servipag *(externo)* | Cobro | Transacción en el proveedor | S21, S23 | — | Adaptador de prueba (`scripts/simular-pago.js`) que preserva contrato, firma y transiciones | `payments_webhook_secret` (solo payments) | Ver payments |
 
 **Quién decide el estado oficial:** precio y stock → inventory; datos personales → clients; rol y validez de
 la sesión → auth; estado del pedido → orders; estado del pago → payments (nunca el navegador).
@@ -33,11 +34,14 @@ flowchart LR
       INV[inventory]
       CLI[clients]
       AUTH[auth]
-      ORD[orders · avance 9]
-      PAY[payments · avance 9]
+      ORD[orders]
+      PAY[payments]
+      GQL[graphql-gateway]
       MI[(mongo-inventory)]
       MC[(mongo-clients)]
       MA[(mongo-auth)]
+      MO[(mongo-orders)]
+      MP[(mongo-payments)]
     end
     SEC[[Docker secrets<br/>./secrets]]
 
@@ -46,17 +50,28 @@ flowchart LR
     GW -- token gw→clients + x-user-id --> CLI
     GW -- token gw→auth --> AUTH
     CLI -- token clients→auth --> AUTH
-    GW -. avance 9 .-> ORD
-    GW -. avance 9 .-> PAY
-    ORD -. reserva stock .-> INV
-    PAY -. confirma pago .-> ORD
+    GW -- token gw→orders --> ORD
+    GW -- token gw→payments --> PAY
+    GW -- token gw→graphql --> GQL
+    ORD -- reserva stock --> INV
+    ORD -- dirección del titular --> CLI
+    PAY -- confirma pago --> ORD
+    GQL -- lectura --> ORD
+    GQL -- lectura por lote --> INV
+    GQL -- contacto --> CLI
+    PROV[Proveedor de pagos<br/>adaptador de prueba] -- aviso firmado HMAC --> GW
     INV --- MI
     CLI --- MC
     AUTH --- MA
+    ORD --- MO
+    PAY --- MP
     SEC -. solo los archivos que declara cada servicio .-> GW
     SEC -.-> AUTH
     SEC -.-> CLI
     SEC -.-> INV
+    SEC -.-> ORD
+    SEC -.-> PAY
+    SEC -.-> GQL
 ```
 
 ## 3. Secuencia representativa: registro y primer inicio de sesión (implementado)
@@ -93,7 +108,7 @@ sequenceDiagram
     AU-->>U: 200 {token JWT ES256, expiraEn: 900}
 ```
 
-## 4. Secuencia diseñada: pedido y pago (avance 9)
+## 4. Secuencia de pedido y pago (implementada; pruebas P19–P35)
 
 1. `POST /api/v1/orders` con `{items:[{productoId, cantidad}], direccionId}`. El navegador **no** envía precios.
 2. orders pide a inventory reservar cada ítem (`POST /products/{id}/reservations`, idempotente por `pedidoId`).
@@ -102,3 +117,36 @@ sequenceDiagram
 4. `POST /api/v1/orders/{id}/payments` → payments crea el pago con el **monto que fija orders**, no el del navegador.
 5. El proveedor avisa a `POST /api/v1/payments/webhook`; payments verifica la firma, ignora avisos repetidos
    (mismo id de transacción) y solo entonces pide a orders marcar el pedido como `pagado`.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as Cliente
+    participant GW as API Gateway
+    participant OR as orders
+    participant IN as inventory
+    participant PA as payments
+    actor PR as Proveedor (adaptador)
+
+    U->>GW: POST /api/v1/orders + Idempotency-Key
+    GW->>OR: POST /orders (x-user-id verificado)
+    OR->>OR: ¿clave ya usada? → devuelve el mismo pedido (200)
+    OR->>IN: GET /internal/products?ids=… (precios, 1 llamada)
+    OR->>IN: POST /products/{id}/reservations (por ítem)
+    alt sin stock
+        OR->>IN: DELETE reservas ya tomadas
+        OR-->>U: 409
+    else stock reservado
+        OR-->>U: 201 pedido pendiente_pago (totales del servidor)
+    end
+    U->>GW: POST /api/v1/orders/{id}/payments {medio}
+    GW->>PA: POST /orders/{id}/payments
+    PA->>OR: GET /internal/orders/{id} (dueño y total)
+    PA-->>U: 201 {pagoId, monto, urlPago}
+    PR->>GW: POST /api/v1/payments/webhook (x-signature, x-timestamp)
+    GW->>PA: POST /webhook
+    PA->>PA: verifica HMAC, vigencia y eventoId no repetido
+    PA->>OR: POST /internal/orders/{id}/paid {pagoId, monto}
+    OR-->>PA: pedido pagado
+    PA-->>PR: 200
+```

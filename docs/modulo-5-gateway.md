@@ -5,7 +5,7 @@
 Se usa **un** API Gateway externo. Todas las rutas comparten el mismo dominio, el mismo frontend y la misma forma
 de autenticar; separarlas por políticas (anónimo, cliente, admin) dentro de un gateway basta. Un segundo gateway
 externo agregaría otro componente público que proteger sin un beneficio concreto para este caso.
-El **GraphQL Gateway** (avance 10) será un componente **interno**, al que se llega pasando por el API Gateway.
+El **GraphQL Gateway** es un componente **interno** (servicio `graphql-gateway`), al que solo se llega pasando por el API Gateway (ruta S24). Ver Módulo 8.
 
 ## 2. Diagrama de clases del gateway y sus políticas
 
@@ -26,6 +26,8 @@ classDiagram
       +acceso: anonimo | Rol[]
       +limitePorMinuto: Integer
       +reenviarToken: Boolean
+      +cabeceras: String[]
+      +propagar401: Boolean
     }
     class ServiceTarget {
       +servicio: String
@@ -68,14 +70,12 @@ classDiagram
       +exp: Number
     }
     class GraphQLGateway {
-      <<avance 10 · interno>>
+      <<interno>>
       +endpoint: /graphql
     }
     class Schema {
-      <<avance 10>>
     }
     class Resolver {
-      <<avance 10>>
     }
     class AuthService {
       <<servicio privado>>
@@ -84,6 +84,12 @@ classDiagram
       <<servicio privado>>
     }
     class ClientsAdapter {
+      <<servicio privado>>
+    }
+    class OrdersAdapter {
+      <<servicio privado>>
+    }
+    class PaymentsAdapter {
       <<servicio privado>>
     }
 
@@ -102,7 +108,9 @@ classDiagram
     ServiceTarget ..> InventoryAdapter
     ServiceTarget ..> ClientsAdapter
     ServiceTarget ..> AuthService
-    ServiceTarget ..> GraphQLGateway : avance 10
+    ServiceTarget ..> OrdersAdapter
+    ServiceTarget ..> PaymentsAdapter
+    ServiceTarget ..> GraphQLGateway : POST /graphql
     GraphQLGateway "1" *-- "1" Schema
     Schema "1" *-- "1..*" Resolver
 ```
@@ -121,11 +129,14 @@ Las políticas de autorización se **comparten** entre rutas: todas las rutas `[
 | Verbo + ruta permitidos (lista blanca) | ✔ (404 si no existe) | ✔ (sus propias rutas) |
 | Token JWT: firma, algoritmo, emisor, audiencia, vencimiento | ✔ | — |
 | Sesión revocada | ✔ (consulta a auth; si auth no responde → 503) | — |
-| Rol por ruta | ✔ | ✔ otra vez en inventory (defensa en profundidad) |
+| Rol por ruta | ✔ | ✔ otra vez en cada servicio (defensa en profundidad) |
 | Llamada proviene del gateway | — | ✔ `x-service-token` (401 si falta) |
-| Propiedad del recurso (`/me`, pedidos propios) | — | ✔ |
+| Propiedad del recurso (`/me`, pedidos y pagos propios) | — | ✔ (clients, orders, payments, graphql-gateway) |
 | Validación de datos de negocio (RUN, precio, stock…) | — | ✔ |
 | Límite de solicitudes y tamaño de cuerpo | ✔ | — |
+| Cabeceras del navegador que pasan (`Idempotency-Key`, firma del proveedor) | ✔ lista blanca por ruta | ✔ validan formato |
+| Firma del aviso de pago (HMAC) | — (ruta anónima) | ✔ payments |
+| Profundidad, costo y campos GraphQL | — | ✔ graphql-gateway |
 | Tiempo de espera hacia el servicio | ✔ (504) | — |
 | Mensajes de error sin detalles internos | ✔ | ✔ |
 

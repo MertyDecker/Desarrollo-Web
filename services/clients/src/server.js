@@ -8,6 +8,7 @@ const { crearAuthClient } = require('./authClient');
 const { crearMailer } = require('./mailer');
 
 const PORT = Number(process.env.PORT || 3002);
+const HOST = process.env.HOST || '0.0.0.0';
 
 async function main() {
   if (!process.env.MONGO_URL || !process.env.AUTH_URL) {
@@ -24,7 +25,11 @@ async function main() {
       token: leerSecreto('SVC_TOKEN_CLIENTS_AUTH_FILE')
     }),
     mailer: crearMailer({ adaptador: process.env.MAIL_ADAPTER || 'dev' }),
-    serviceTokens: { gateway: leerSecreto('SVC_TOKEN_GATEWAY_FILE') },
+    serviceTokens: {
+      gateway: leerSecreto('SVC_TOKEN_GATEWAY_FILE'),
+      orders: leerSecreto('SVC_TOKEN_ORDERS_FILE'),
+      graphql: leerSecreto('SVC_TOKEN_GRAPHQL_FILE')
+    },
     logger: true
   });
 
@@ -36,7 +41,7 @@ async function main() {
   process.on('SIGTERM', cerrar);
   process.on('SIGINT', cerrar);
 
-  await app.listen({ port: PORT, host: '0.0.0.0' });
+  await app.listen({ port: PORT, host: HOST });
 }
 
 main().catch((err) => {
